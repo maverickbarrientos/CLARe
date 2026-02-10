@@ -1,79 +1,131 @@
-# FastAPI Project Boilerplate
+# CLARe Backend API
 
-Starter template for **FastAPI** projects with JWT authentication and asynchronous **SQLAlchemy** operations.  
-Designed to help you quickly set up a scalable backend with proper structure, authentication, and database integration.
+## Overview
 
----
+The CLARe Backend is the core service responsible for handling authentication, laboratory reservations, QR code generation and validation, and system data management for the **CITE Laboratory Reservation System (CLARe)**.
 
-## Features
-
-- JWT authentication using **FastAPI Users**  
-- Asynchronous SQLAlchemy database operations  
-- Organized folder structure with API versioning, routers, DB, auth, and schemas  
-- Environment variable configuration for easy setup  
-- Ready for local development  
+This backend provides RESTful APIs used by both the Admin Web Application (ReactJS) and the User Mobile Application (React Native), as well as hardware integration for QR code validation.
 
 ---
 
-## Tech Stack
+## Responsibilities
 
-- Python 3.13.5  
-- [FastAPI](https://fastapi.tiangolo.com/)  
-- [SQLAlchemy (Async)](https://docs.sqlalchemy.org/)  
-- [FastAPI Users](https://frankie567.github.io/fastapi-users/) for JWT authentication  
-- [aiomysql](https://aiomysql.readthedocs.io/en/latest/) (Async MySQL driver)  
-- [python-dotenv](https://pypi.org/project/python-dotenv/) for environment variables  
-- [Uvicorn](https://www.uvicorn.org/) (ASGI server)  
+The backend is responsible for:
+
+- User authentication and authorization
+- Laboratory reservation management
+- QR code generation and validation
+- Reservation approval workflow
+- Real-time laboratory status updates
+- Usage logging and analytics
+- Conflict detection for reservations
+- Admin management operations
 
 ---
 
-## Setup
+## Technology Stack
 
-1. Clone the repository:
-```bash
-git clone https://github.com/your-username/fastapi-project-boilerplate.git
-cd fastapi-project-boilerplate
+- **FastAPI**
+- **Python**
+- **MySQL**
+- **SQLAlchemy ORM**
+- **JWT Authentication**
+- **Pydantic Validation**
+
+## 🚀 Features
+
+### User API
+- PHINMAED account login via JWT
+- Submit lab reservation requests
+- View reservation history
+
+### Admin API
+- CRUD Users
+- CRUD Computer Labs
+- Approve/Decline Reservations
+- Invalidate QR Codes
+- View usage logs and analytics
+
+### System Logic
+- QR code generation and validation
+- Reservation status transitions:
+  - `pending → reserved → in_use → completed`
+  - Auto-cancel if not scanned within allowed time
+- Conflict detection
+- Real-time lab availability
+
+---
+
+## Reservation Status Flow
+
 ```
-2. Create a virtual environment and activate it:
+Pending → Reserved → In Use → Completed
+           ↓
+        Cancelled
+```
+
+- Reservations remain **Reserved** until QR code is scanned.
+- If QR is not scanned within the allowed time window, the reservation is automatically cancelled.
+
+---
+
+## 📡 API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST   | /auth/login | User login |
+| POST   | /users | Create user |
+| GET    | /computer_labs | List labs |
+| POST   | /reservations | Create reservation |
+| POST   | /qr/validate | Validate QR code |
+| GET    | /analytics/usage | Usage logs & analytics |
+
+
+## Running the Backend Locally
+
+### 1. Create Virtual Environment
 ```
 python -m venv venv
-source venv/bin/activate   # Linux / macOS
-venv\Scripts\activate      # Windows
-
 ```
 
-3. Install dependencies:
+### 2. Activate Environment
+```
+venv\Scripts\activate
+```
+
+### 3. Install Dependencies
 ```
 pip install -r requirements.txt
-
 ```
 
-4. Create a .env file in the project root with the following content:
+### 4. Run FastAPI Server
 ```
-DATABASE_URL=mysql+aiomysql://root:password@localhost/fastapi_db
-SECRET_KEY=your-secret-key
-```
-
-5. Run the server
-```
-uvicorn main:app --reload
-
+uvicorn app.main:app --reload
 ```
 
-6. Access the API documentation at:
-   http://127.0.0.1:8000/docs
+Backend will run at:
 
+```
+http://127.0.0.1:8000
+```
 
-## Folder Structure
+API documentation available at:
 
-- api/ – Organize your API routes by version
-- db/ – Database models, tables, and session setup
-- auth/ – Authentication logic, JWT handling, user services
-- schemas/ – Request and response data structures using Pydantic
-- main.py – FastAPI app entry point
+```
+http://127.0.0.1:8000/docs
+```
 
-## Additional Resources
+---
 
-- [FastAPI](https://fastapi.tiangolo.com/)  
-- [SQLAlchemy (Async)](https://docs.sqlalchemy.org/)  
-- [FastAPI Users](https://frankie567.github.io/fastapi-users/)
+## Future Improvements
+
+- WebSocket support for real-time lab updates
+- Notification service
+- Advanced analytics reporting
+- Automated reservation reminders
+
+---
+
+## CLARe System
+
+Part of the **CLARe – CITE Laboratory Reservation System** developed for the College of Information Technology and Engineering (CITE).

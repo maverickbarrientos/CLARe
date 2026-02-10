@@ -15,6 +15,11 @@ def computer_lab_service_dependency(session: AsyncSession = Depends(get_session)
 async def index():
     pass
 
+"""
+
+ADMIN - COMPUTER LABS ROUTE
+
+"""
 @admin_router.get("/computer_labs", response_model=dict[str, list[ComputerLabResponse]])
 async def get_computer_labs(
     computer_lab_service: ComputerLabService = Depends(computer_lab_service_dependency)
@@ -23,6 +28,16 @@ async def get_computer_labs(
     computer_labs = await computer_lab_service.get_computer_labs()
     
     return { "computer_labs" : computer_labs }
+
+@admin_router.get("/computer_lab/{lab_id}", response_model=dict[str, ComputerLabResponse])
+async def get_lab_by_id(
+    lab_id: int,
+    computer_lab_service: ComputerLabService = Depends(computer_lab_service_dependency)
+):
+    
+    computer_lab = await computer_lab_service.get_lab_by_id(lab_id)
+    
+    return { "computer_lab" : computer_lab }
 
 @admin_router.post("/create_lab", response_model=dict[str, ComputerLabResponse])
 async def create_lab(
@@ -40,9 +55,9 @@ async def update_lab(
     computer_lab: ComputerLabUpdate,
     computer_lab_service: ComputerLabService = Depends(computer_lab_service_dependency)
 ):
-    update_lab = await computer_lab_service.update_lab(lab_id, computer_lab)
+    updated_lab = await computer_lab_service.update_lab(lab_id, computer_lab)
     
-    return { "computer_lab" : update_lab }
+    return { "computer_lab" : updated_lab }
 
 @admin_router.delete("/delete_lab", response_model=dict[str, str])
 async def delete_lab(
@@ -50,6 +65,15 @@ async def delete_lab(
     computer_lab_service: ComputerLabService = Depends(computer_lab_service_dependency)
 ):
     
-    delete_lab = await computer_lab_service.delete_lab(lab_id)
+    result = await computer_lab_service.delete_lab(lab_id)
     
-    return { "status" : delete_lab }
+    return { "status" : result }
+
+
+"""
+ADMIN - USERS ROUTE
+
+"""
+@admin_router.get("/users")
+async def get_users():
+    pass

@@ -9,6 +9,9 @@ class UserInformation(BaseModel):
     program: str
     section: str
 
+class UserResponse(UserInformation):
+    pass
+
 class UserRead(schemas.BaseUser[int]):
     pass
 
