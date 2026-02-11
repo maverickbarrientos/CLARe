@@ -11,9 +11,9 @@ class Base(DeclarativeBase):
 
 class Users(SQLAlchemyBaseUserTable[int], Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    
+
+    reservations = relationship("Reservation", back_populates="user")    
     users_information = relationship("UsersInformation", back_populates="user")
-    reservations = relationship("Reservation", back_populates="user")
 
 async def create_tables():
     async with engine.begin() as connection:

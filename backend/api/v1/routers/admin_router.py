@@ -1,15 +1,21 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from config.security import UserManager, get_user_manager
 from services.computer_lab_service import ComputerLabService
+from services.user_service import UserService
 from database.session import get_session
 
 from schemas.computer_lab_schema import ComputerLabCreate, ComputerLabResponse, ComputerLabUpdate
+from schemas.user_schemas import UserCreate, UserRead, UserInformationCreate, UserInformationUpdate
 
 admin_router = APIRouter()
 
 def computer_lab_service_dependency(session: AsyncSession = Depends(get_session)) -> ComputerLabService:
     return ComputerLabService(session)
+
+def user_service_dependency(session: AsyncSession = Depends(get_session)) -> AsyncSession:
+    return UserService(session) 
 
 @admin_router.get("/")
 async def index():
@@ -75,5 +81,33 @@ ADMIN - USERS ROUTE
 
 """
 @admin_router.get("/users")
-async def get_users():
-    pass
+async def get_users(
+    user_service: UserService = Depends(user_service_dependency)
+):
+    
+    users = await user_service.get_all_users()
+    
+    return { "users" : users }
+
+@admin_router.post("/create_user")
+async def create_user(
+    user: UserCreate,
+    user_information: UserInformationCreate,
+    user_service: UserService = Depends(user_service_dependency),
+    user_manager: UserManager = Depends(get_user_manager)
+):
+    
+    new_user = await user_service.create_user(user, user_information, user_manager)
+    
+    return { "new_user" : new_user }
+
+@admin_router.patch("/update_user")
+async def update_user(
+    user_id: int,
+    payload: UserInformationUpdate,
+    user_service: UserService = Depends(user_service_dependency)
+):
+    
+    updated_user = await user_service.update_user(user_id, payload)
+    
+    return updated_user

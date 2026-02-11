@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
-from auth.users import fastapi_users, auth_backend
+from config.security import fastapi_users, auth_backend
 from database.base import create_tables
 
 from api.v1.routers.admin_router import admin_router
