@@ -1,0 +1,18 @@
+{
+  "id": 6,
+  "is_active": true,
+  "is_verified": false,
+  "email": "maverick@gmail.com",
+  "hashed_password": "$argon2id$v=19$m=65536,t=3,p=4$zml3PYR7k+NZCGHbpx/w4w$DUCpwJpYYj03QM4Gka4ePJfmT26TPbgFDvNyCdt+QIw",
+  "is_superuser": false,
+  "users_information": [
+    {
+      "user_id": 6,
+      "first_name": "James",
+      "program": "BSME",
+      "last_name": "Reid",
+      "id": 1,
+      "section": "FB-BSME 2-2"
+    }
+  ]
+}

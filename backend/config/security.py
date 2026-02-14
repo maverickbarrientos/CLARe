@@ -1,6 +1,6 @@
 
 from typing import Optional
-from fastapi import Depends, Request, Response
+from fastapi import Depends, Request, Response, HTTPException
 from database.base import Users
 from fastapi_users import BaseUserManager, FastAPIUsers, IntegerIDMixin
 from fastapi_users.authentication import AuthenticationBackend, BearerTransport, JWTStrategy
@@ -26,6 +26,15 @@ class UserManager(IntegerIDMixin, BaseUserManager[Users, int]):
         
     async def on_after_request_verify(self, user: Users, token: str, request: Optional[Request]):
         print(f"Verification request from User ID {user.id}. Token : {token}")
+        
+    async def on_before_delete(self, user: Users, request: Optional[Request]):
+        print(f"Deleting user {user.id}")
+        
+        if user.is_superuser:
+            raise ValueError("Super user cannot be deleted")
+        
+    async def on_after_delete(self, user: Users, request: Optional[Request]):
+        print(f"User deleted. User ID {user.id}")
         
 def get_user_manager(user_db= Depends(get_user_db)):
     yield UserManager(user_db)

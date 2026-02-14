@@ -1,19 +1,21 @@
 from fastapi import HTTPException
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from fastapi_users.exceptions import UserNotExists
 
 from config.security import UserManager
 from .base import BaseService
 from database.base import Users
 from models.users_information import UsersInformation
 
-from schemas.user_schemas import UserInformationCreate, UserInformationResponse, UserCreate, UserRead
+from schemas.user_schemas import UserInformationCreate, UserCreate, UserRead
 
 class UserService(BaseService):
     
     async def get_all_users(self):
         
-        stmt = select(UsersInformation).where(UsersInformation.user_id == Users.id)
+        stmt = select(Users).options(selectinload(Users.users_information))
         
         try:
             result = await self.session.execute(stmt)
@@ -29,12 +31,14 @@ class UserService(BaseService):
         return users
     
     
-    async def get_user_by_id(self, user_id: int) -> UserInformationResponse:
+    async def get_user_by_id(self, user_id: int) -> UserRead:
         
         if not user_id:
             raise HTTPException(status_code=400, detail="No ID provided")
         
-        stmt = select(UsersInformation).where(UsersInformation.user_id == user_id)
+        stmt = (select(Users)
+                .options(selectinload(Users.users_information))
+                .where(Users.id == user_id))
         
         try:
             result = await self.session.execute(stmt)
@@ -73,7 +77,7 @@ class UserService(BaseService):
                 }
         
     
-    async def create_user_information(self, new_user_id: int, user_information: UserInformationCreate) -> UserInformationResponse:
+    async def create_user_information(self, new_user_id: int, user_information: UserInformationCreate) -> UserRead:
         
         new_user_information = UsersInformation(user_id=new_user_id, **user_information.model_dump(exclude_unset=True))
         self.session.add(new_user_information)
@@ -128,3 +132,24 @@ class UserService(BaseService):
             raise HTTPException(status_code=500, detail="Failed to update user information")
         
         return user 
+    
+    async def delete_user(self, user_id: int, user_manager: UserManager):
+        
+        try:
+            user = await user_manager.get(user_id)
+            
+        except UserNotExists:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        except SQLAlchemyError as e:
+            print(f"Database error in delete_user (fetch) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to fetch user")
+                    
+        try:
+            await user_manager.delete(user)
+            
+        except SQLAlchemyError as e:
+            print(f"Database error in delete_user (delete) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to delete user")
+        
+        return "deleted"
