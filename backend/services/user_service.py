@@ -9,7 +9,7 @@ from .base import BaseService
 from database.base import Users
 from models.users_information import UsersInformation
 
-from schemas.user_schemas import UserInformationCreate, UserCreate, UserRead
+from schemas.user_schemas import UserInformationCreate, UserCreate, UserResponse
 
 class UserService(BaseService):
     
@@ -31,7 +31,7 @@ class UserService(BaseService):
         return users
     
     
-    async def get_user_by_id(self, user_id: int) -> UserRead:
+    async def get_user_by_id(self, user_id: int) -> UserResponse:
         
         if not user_id:
             raise HTTPException(status_code=400, detail="No ID provided")
@@ -54,7 +54,7 @@ class UserService(BaseService):
         return user
     
     
-    async def create_user(self, user: UserCreate, user_information: UserInformationCreate, user_manager: UserManager) -> dict[str, UserRead]:
+    async def create_user(self, user: UserCreate, user_information: UserInformationCreate, user_manager: UserManager) -> dict[str, UserResponse]:
                 
         try:
             new_user = await user_manager.create(user)
@@ -77,7 +77,7 @@ class UserService(BaseService):
                 }
         
     
-    async def create_user_information(self, new_user_id: int, user_information: UserInformationCreate) -> UserRead:
+    async def create_user_information(self, new_user_id: int, user_information: UserInformationCreate) -> UserResponse:
         
         new_user_information = UsersInformation(user_id=new_user_id, **user_information.model_dump(exclude_unset=True))
         self.session.add(new_user_information)

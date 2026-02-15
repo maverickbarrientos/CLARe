@@ -9,7 +9,7 @@ from models.reservation import Reservation
 from models.users_information import UsersInformation
 from database.base import Users
 
-from schemas.reservation_schemas import ReservationStatus, ReservationCreate, ReservationUpdate
+from schemas.reservation_schemas import ReservationStatus, ReservationCreate, ReservationUpdate, ReservationResponse, ReservationCreateResponse
 
 class ReservationService(BaseService):
     
@@ -28,6 +28,19 @@ class ReservationService(BaseService):
     #         raise HTTPException(status_code=500, detail="Failed to fetch all reservations")
         
     #     return reservations
+    
+    async def __fetch_reservation_by_id(self, reservation_id):
+        stmt = select(Reservation).where(Reservation.id == reservation_id)
+        
+        try:
+            result = await self.session.execute(stmt)
+            reservation = result.scalar_one_or_none()
+            
+        except SQLAlchemyError as e:
+            print(f"Database error in delete_reservation (fetch) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to fetch reservation")
+        
+        return reservation
     
     async def __check_conflict(self, lab_id, start_date, end_date):
                 
@@ -66,12 +79,7 @@ class ReservationService(BaseService):
         return existing_reservation
             
     
-    async def create_reservation(self, payload: ReservationCreate):
-        existing_reservation = await self.__check_existing_reservation(payload.user_id)
-        
-        if existing_reservation:
-            raise HTTPException(status_code=409, detail="Reservation already exists")
-        
+    async def create_reservation(self, payload: ReservationCreate):        
         conflicts = await self.__check_conflict(payload.lab_id, payload.start_date, payload.end_date)
         
         if conflicts:
@@ -91,10 +99,12 @@ class ReservationService(BaseService):
         
         await self.session.refresh(reservation)
         
+        print("Generate QR Code")
+        
         return reservation
     
     
-    async def get_all_reservations(self):
+    async def get_all_reservations(self) -> list[ReservationResponse]:
     
         stmt = (select(Reservation)
                 .join(Reservation.user)
@@ -112,7 +122,7 @@ class ReservationService(BaseService):
         return reservations
     
     
-    async def get_reservation_by_id(self, reservation_id):
+    async def get_reservation_by_id(self, reservation_id) -> ReservationResponse:
         
         stmt = (select(Reservation).where(Reservation.id == reservation_id)
                 .join(Reservation.user)
@@ -133,7 +143,8 @@ class ReservationService(BaseService):
         
         return reservation
     
-    async def search_reservation(self, search: str):
+    
+    async def search_reservation(self, search: str) -> list[ReservationResponse]:
         
         stmt = (select(Reservation)
                 .join(Reservation.user)
@@ -143,7 +154,7 @@ class ReservationService(BaseService):
         if search:
             stmt = stmt.where(or_(
                 UsersInformation.first_name.ilike(f"%{search}%"),
-                UsersInformation.last_name.ilike(f"%{search}"),
+                UsersInformation.last_name.ilike(f"%{search}%"),
                 UsersInformation.program.ilike(f"%{search}%")
             ))
         
@@ -157,17 +168,10 @@ class ReservationService(BaseService):
         
         return reservation_search
     
-    async def update_reservation(self, payload: ReservationUpdate, reservation_id):
+    
+    async def update_reservation(self, payload: ReservationUpdate, reservation_id) -> ReservationCreateResponse:
         
-        stmt = select(Reservation).where(Reservation.id == reservation_id)
-        
-        try:
-            result = await self.session.execute(stmt)
-            reservation = result.scalar_one_or_none()
-        
-        except SQLAlchemyError as e:
-            print(f"Database error in update_reservation (fetch) : {e}")
-            raise HTTPException(status_code=500, detail="Failed to fetch reservation")
+        reservation = await self.__fetch_reservation_by_id(reservation_id)
         
         if not reservation: 
             raise HTTPException(status_code=404, detail="Reservation not found")
@@ -195,20 +199,13 @@ class ReservationService(BaseService):
         
         return reservation
     
-    async def delete_reservation(self, reservation_id):
+    
+    async def delete_reservation(self, reservation_id) -> str:
         
         if not reservation_id:
             raise HTTPException(status_code=400, detail="No Reservation ID found")
         
-        stmt = select(Reservation).where(Reservation.id == reservation_id)
-        
-        try:
-            result = await self.session.execute(stmt)
-            reservation = result.scalar_one_or_none()
-            
-        except SQLAlchemyError as e:
-            print(f"Database error in delete_reservation (fetch) : {e}")
-            raise HTTPException(status_code=500, detail="Failed to fetch reservation")
+        reservation = await self.__fetch_reservation_by_id(reservation_id)
         
         if not reservation:
             raise HTTPException(status_code=404, detail="Reservation not found")
@@ -224,21 +221,13 @@ class ReservationService(BaseService):
         
         return "deleted"
     
-    async def update_reservation_status(self, reservation_id, status: ReservationStatus):
+    
+    async def update_reservation_status(self, reservation_id, status: ReservationStatus) -> ReservationCreateResponse:
         
-        stmt = select(Reservation).where(Reservation.id == reservation_id)
-        
-        try:
-            result = await self.session.execute(stmt)
-            reservation = result.scalar_one_or_none()
-            
-        except SQLAlchemyError as e:
-            print(f"Database error in approve_reservation (fetch) : {e}")
-            raise HTTPException(status_code=500, detail="Failed to fetch reservation")
+        reservation = await self.__fetch_reservation_by_id(reservation_id)
         
         if not reservation:
             raise HTTPException(status_code=404, detail="Reservation not found")
-                
         
         match status:
             case ReservationStatus.reserved:

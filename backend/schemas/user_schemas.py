@@ -5,28 +5,32 @@ from typing import Optional
 class UserInformationCreate(BaseModel):
     first_name: str
     last_name: str
-    program: str
-    section: str
+    department: str
 
-class UserInformationRead(BaseModel):
+class UserInformationResponse(BaseModel):
     id: int
     first_name: str
     last_name: str
-    program: str
+    department: str
     user_id: int
-    section: str
 
 class UserInformationUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
-    program: Optional[str] = None
-    section: Optional[str] = None
+    department: Optional[str] = None
 
 class UserRead(schemas.BaseUser[int]):
-    user_information: UserInformationRead
+    pass
+    
+class UserResponse(schemas.BaseUser[int]):
+    users_information: Optional[UserInformationResponse] = None
 
 class UserCreate(schemas.BaseUserCreate):
     pass
+
+class UserCreateResponse(BaseModel):
+    user: UserRead
+    user_information: UserInformationResponse
 
 class UserUpdate(schemas.BaseUserUpdate):
     pass

@@ -9,8 +9,7 @@ class UsersInformation(Base):
     user_id: int = Column(ForeignKey("user.id", ondelete="CASCADE", onupdate="CASCADE"), unique=True)
     first_name: str = Column(String(255))
     last_name: str = Column(String(255))
-    program: str = Column(String(255))
-    section: str = Column(String(255))
+    department: str = Column(String(255))
     
-    user = relationship("Users", back_populates="users_information", uselist=False)
+    user = relationship("Users", back_populates="users_information")
     

@@ -11,6 +11,7 @@ class Reservation(Base):
     id: int = Column(Integer, primary_key=True, autoincrement=True)
     user_id: int = Column(ForeignKey("user.id", ondelete="CASCADE", onupdate="CASCADE"), unique=True)
     lab_id: int = Column(ForeignKey("computer_labs.id"))
+    full_name: str = Column(String(255))
     reservation_type: str = Column(String(255))
     start_date: datetime = Column(DateTime)
     end_date: datetime = Column(DateTime)

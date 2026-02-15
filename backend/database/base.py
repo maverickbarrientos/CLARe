@@ -13,7 +13,7 @@ class Users(SQLAlchemyBaseUserTable[int], Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     reservations = relationship("Reservation", back_populates="user")    
-    users_information = relationship("UsersInformation", back_populates="user")
+    users_information = relationship("UsersInformation", back_populates="user", uselist=False)
 
 async def create_tables():
     async with engine.begin() as connection:

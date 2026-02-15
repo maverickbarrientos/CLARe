@@ -9,8 +9,8 @@ from services.reservation_service import ReservationService
 from database.session import get_session
 
 from schemas.computer_lab_schema import ComputerLabCreate, ComputerLabResponse, ComputerLabUpdate
-from schemas.user_schemas import UserCreate, UserRead, UserInformationCreate, UserInformationUpdate
-from schemas.reservation_schemas import ReservationCreate, ReservationUpdate, ReservationStatus
+from schemas.user_schemas import UserCreate, UserInformationCreate, UserInformationUpdate, UserResponse, UserCreateResponse
+from schemas.reservation_schemas import ReservationCreate, ReservationUpdate, ReservationStatus, ReservationResponse, ReservationCreateResponse
 
 admin_router = APIRouter()
 
@@ -87,7 +87,7 @@ async def delete_lab(
 ADMIN - USERS ROUTE
 
 """
-@admin_router.get("/users")
+@admin_router.get("/users", response_model=dict[str, list[UserResponse]])
 async def get_users(
     user_service: UserService = Depends(user_service_dependency)
 ):
@@ -106,7 +106,7 @@ async def get_user_by_id(
     
     return { "user" : user } 
 
-@admin_router.post("/create_user")
+@admin_router.post("/create_user", response_model=UserCreateResponse)
 async def create_user(
     user: UserCreate,
     user_information: UserInformationCreate,
@@ -116,7 +116,7 @@ async def create_user(
     
     new_user = await user_service.create_user(user, user_information, user_manager)
     
-    return { "new_user" : new_user }
+    return  new_user
 
 @admin_router.patch("/update_user")
 async def update_user(
@@ -129,13 +129,24 @@ async def update_user(
     
     return updated_user
 
+@admin_router.delete("/delete_user", response_model=dict[str, str])
+async def delete_user(
+    user_id: int,
+    user_service: UserService = Depends(user_service_dependency),
+    user_manager: UserManager = Depends(get_user_manager)
+):
+    
+    result = await user_service.delete_user(user_id, user_manager)
+    
+    return { "message" : result }
+
 """
 
 ADMIN - RESERVATION ROUTE
 
 """
 
-@admin_router.get("/reservations")
+@admin_router.get("/reservations", response_model=dict[str, list[ReservationResponse]])
 async def get_all_reservations(
     reservation_service: ReservationService = Depends(reservation_service_dependency)
 ):
@@ -144,16 +155,16 @@ async def get_all_reservations(
     
     return { "reservations" : reservations }
 
-@admin_router.get("/reservation/{reservation_id}")
+@admin_router.get("/reservation/{reservation_id}", response_model=dict[str, ReservationResponse])
 async def get_reservation_by_id(
     reservation_id: int,
     reservation_service: ReservationService = Depends(reservation_service_dependency)
 ):
     reservation = await reservation_service.get_reservation_by_id(reservation_id)
     
-    return reservation
+    return { "reservation" : reservation }
 
-@admin_router.get("/search_reservation")
+@admin_router.get("/search_reservation", response_model=dict[str, list[ReservationResponse]])
 async def search_reservation(
     search_query: Optional[str] = None,
     reservation_service: ReservationService = Depends(reservation_service_dependency)
@@ -161,19 +172,19 @@ async def search_reservation(
     
     reservations = await reservation_service.search_reservation(search_query)
     
-    return reservations
+    return { "reservations" : reservations }
 
-@admin_router.post("/create_reservation")
-async def create_reservation(
+@admin_router.post("/custom_reservation", response_model=dict[str, ReservationCreateResponse])
+async def custom_reservation(
     reservation: ReservationCreate,
     reservation_service: ReservationService = Depends(reservation_service_dependency)
 ):
-    
-  new_reservation = await reservation_service.create_reservation(reservation)  
+
+  new_reservation = await reservation_service.create_reservation(reservation)
   
   return { "reservation" : new_reservation }
 
-@admin_router.delete("/delete_reservation")
+@admin_router.delete("/delete_reservation", response_model=dict[str, str])
 async def delete_reservation(
     reservation_id: int,
     reservation_service: ReservationService = Depends(reservation_service_dependency)
@@ -183,7 +194,7 @@ async def delete_reservation(
     
     return { "message" : result }
 
-@admin_router.patch("/update_reservation")
+@admin_router.patch("/update_reservation", response_model=dict[str, ReservationCreateResponse])
 async def update_reservation(
     reservation_id: int,
     payload: ReservationUpdate,
@@ -202,7 +213,7 @@ async def approve_reservation(
     
     reservation = await reservation_service.update_reservation_status(reservation_id, ReservationStatus.reserved)
     
-    return reservation
+    return { "reservation" : reservation }
 
 @admin_router.patch("/reservation/{reservation_id}/reject")
 async def reject_reservation(
@@ -212,4 +223,4 @@ async def reject_reservation(
     
     reservation = await reservation_service.update_reservation_status(reservation_id, ReservationStatus.rejected)
     
-    return reservation
+    return { "reservation" : reservation }
