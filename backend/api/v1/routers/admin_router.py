@@ -6,6 +6,7 @@ from config.security import UserManager, get_user_manager, fastapi_users, curren
 from services.computer_lab_service import ComputerLabService
 from services.user_service import UserService
 from services.reservation_service import ReservationService
+from services.qr_code_service import QRCodeService
 from database.session import get_session
 
 from schemas.computer_lab_schema import ComputerLabCreate, ComputerLabResponse, ComputerLabUpdate
@@ -17,11 +18,14 @@ admin_router = APIRouter()
 def computer_lab_service_dependency(session: AsyncSession = Depends(get_session)) -> ComputerLabService:
     return ComputerLabService(session)
 
-def user_service_dependency(session: AsyncSession = Depends(get_session)) -> AsyncSession:
+def user_service_dependency(session: AsyncSession = Depends(get_session)) -> UserService:
     return UserService(session) 
 
 def reservation_service_dependency(session: AsyncSession = Depends(get_session)) -> ReservationService:
     return ReservationService(session)
+
+def qr_service_dependency(session: AsyncSession = Depends(get_session)) -> QRCodeService:
+    return QRCodeService(session)
 
 @admin_router.get("/")
 async def index():
@@ -208,12 +212,17 @@ async def update_reservation(
 @admin_router.patch("/reservation/{reservation_id}/approve")
 async def approve_reservation(
     reservation_id: int,
-    reservation_service: ReservationService = Depends(reservation_service_dependency)
+    reservation_service: ReservationService = Depends(reservation_service_dependency),
+    qr_code_service: QRCodeService = Depends(qr_service_dependency)
 ):
     
     reservation = await reservation_service.update_reservation_status(reservation_id, ReservationStatus.reserved)
     
-    return { "reservation" : reservation }
+    if reservation:
+        qr_payload = await qr_code_service.generate_qr_data(reservation)
+        qr_code = await qr_code_service.create_qr_code(qr_payload)
+    
+    return { "reservation" : reservation, "qr_code" : qr_code }
 
 @admin_router.patch("/reservation/{reservation_id}/reject")
 async def reject_reservation(
@@ -224,3 +233,13 @@ async def reject_reservation(
     reservation = await reservation_service.update_reservation_status(reservation_id, ReservationStatus.rejected)
     
     return { "reservation" : reservation }
+
+@admin_router.patch('/verify_qr_code')
+async def verify_qr_code(
+    qr_value: str,
+    qr_code_service: QRCodeService = Depends(qr_service_dependency)
+):
+    
+    qr_with_reservation = await qr_code_service.verify_qr(qr_value)
+    
+    return qr_with_reservation
