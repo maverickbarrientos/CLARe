@@ -140,7 +140,7 @@ class QRCodeService(BaseService):
         
         reservation = qr_code.reservations
         
-        now = datetime.now(timezone.utc)
+        now = datetime.now()
         start_scan = reservation.start_date - timedelta(minutes=30)
         end_scan = reservation.start_date + timedelta(minutes=30)
         

@@ -1,7 +1,8 @@
 from pydantic import BaseModel
 import enum
-
 from datetime import datetime
+
+from schemas.reservation_schemas import ReservationCreateResponse
 
 class QRCodeStatus(enum.Enum):
     valid = "valid"
@@ -15,4 +16,11 @@ class QRCodeCreate(BaseModel):
     expiry_date: datetime
     
 class QRCodeResponse(QRCodeCreate):
-    pass
+    id: int
+
+class QRCodeWithReservation(QRCodeResponse):
+    reservations: ReservationCreateResponse
+    
+class ApprovalResponse(BaseModel):
+    reservation: ReservationCreateResponse
+    qr_code: QRCodeResponse

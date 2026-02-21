@@ -20,3 +20,4 @@ class Reservation(Base):
     user = relationship("Users", back_populates="reservations")
     computer_labs = relationship("ComputerLab", back_populates="reservations")
     qr_codes = relationship("QRCode", back_populates="reservations")
+    cancellation_requests = relationship("CancellationRequest", back_populates="reservations")

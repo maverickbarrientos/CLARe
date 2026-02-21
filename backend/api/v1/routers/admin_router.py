@@ -2,16 +2,18 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 
-from config.security import UserManager, get_user_manager, fastapi_users, current_active_user
+from config.security import UserManager, get_user_manager
 from services.computer_lab_service import ComputerLabService
 from services.user_service import UserService
 from services.reservation_service import ReservationService
 from services.qr_code_service import QRCodeService
+from services.cancellation_request_service import CancellationRequestService
 from database.session import get_session
 
 from schemas.computer_lab_schema import ComputerLabCreate, ComputerLabResponse, ComputerLabUpdate
 from schemas.user_schemas import UserCreate, UserInformationCreate, UserInformationUpdate, UserResponse, UserCreateResponse
 from schemas.reservation_schemas import ReservationCreate, ReservationUpdate, ReservationStatus, ReservationResponse, ReservationCreateResponse
+from schemas.qr_code_schemas import QRCodeWithReservation, QRCodeResponse, ApprovalResponse
 
 admin_router = APIRouter()
 
@@ -26,6 +28,9 @@ def reservation_service_dependency(session: AsyncSession = Depends(get_session))
 
 def qr_service_dependency(session: AsyncSession = Depends(get_session)) -> QRCodeService:
     return QRCodeService(session)
+
+def cancellation_service_dependency(session: AsyncSession = Depends(get_session)) -> CancellationRequestService:
+    return CancellationRequestService(session)
 
 @admin_router.get("/")
 async def index():
@@ -100,7 +105,7 @@ async def get_users(
     
     return { "users" : users }
 
-@admin_router.get("/user/{user_id}")
+@admin_router.get("/user/{user_id}", response_model=dict[str, UserResponse])
 async def get_user_by_id(
     user_id: int,
     user_service: UserService = Depends(user_service_dependency)
@@ -209,7 +214,7 @@ async def update_reservation(
     
     return { "reservation" : updated_reservation }
 
-@admin_router.patch("/reservation/{reservation_id}/approve")
+@admin_router.patch("/reservation/{reservation_id}/approve", response_model=ApprovalResponse)
 async def approve_reservation(
     reservation_id: int,
     reservation_service: ReservationService = Depends(reservation_service_dependency),
@@ -224,7 +229,7 @@ async def approve_reservation(
     
     return { "reservation" : reservation, "qr_code" : qr_code }
 
-@admin_router.patch("/reservation/{reservation_id}/reject")
+@admin_router.patch("/reservation/{reservation_id}/reject", response_model=ReservationCreateResponse)
 async def reject_reservation(
     reservation_id: int,
     reservation_service: ReservationService = Depends(reservation_service_dependency)
@@ -232,9 +237,30 @@ async def reject_reservation(
     
     reservation = await reservation_service.update_reservation_status(reservation_id, ReservationStatus.rejected)
     
-    return { "reservation" : reservation }
+    return reservation
 
-@admin_router.patch('/verify_qr_code')
+@admin_router.patch("/reject_cancellation")
+async def reject_cancellation(
+    reservation_id: int,
+    admin_note: str,
+    cancellation_service: CancellationRequestService = Depends(cancellation_service_dependency)
+):
+    
+    result = await cancellation_service.reject_request(reservation_id, admin_note)
+    
+    return result
+
+@admin_router.patch("/approve_cancellation")
+async def approve_cancellation(
+    reservation_id: int,
+    cancellation_service: CancellationRequestService = Depends(cancellation_service_dependency)
+):
+    
+    result = await cancellation_service.approve_request(reservation_id)
+    
+    return result
+
+@admin_router.patch('/verify_qr_code', response_model=QRCodeWithReservation)
 async def verify_qr_code(
     qr_value: str,
     qr_code_service: QRCodeService = Depends(qr_service_dependency)

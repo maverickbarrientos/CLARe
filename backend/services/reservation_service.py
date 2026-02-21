@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from .base import BaseService
 from models.reservation import Reservation
@@ -29,7 +29,7 @@ class ReservationService(BaseService):
         
     #     return reservations
     
-    async def __fetch_reservation_by_id(self, reservation_id):
+    async def _fetch_reservation_by_id(self, reservation_id):
         stmt = select(Reservation).where(Reservation.id == reservation_id)
         
         try:
@@ -42,7 +42,7 @@ class ReservationService(BaseService):
         
         return reservation
     
-    async def __check_conflict(self, lab_id, start_date, end_date):
+    async def __check_conflict(self,lab_id, start_date, end_date):
                 
         if start_date < datetime.now(timezone.utc):
             return { "success" : False, "message" : "Reservation must be made at least 2 days in advance" }
@@ -59,15 +59,36 @@ class ReservationService(BaseService):
         
         return conflicts
     
-    
-    async def __check_existing_reservation(self, user_id):
+    async def __has_date_conflict(self, reservation_id, lab_id, start_date, end_date):
+        if start_date < datetime.now(timezone.utc):
+            return { "success" : False, "message" : "Reservation must be made at least 2 days in advance" }
         
-        stmt = select(Reservation).where(Reservation.user_id == user_id)
+        stmt = select(Reservation).where(
+                and_(Reservation.id != reservation_id,
+                     Reservation.lab_id == lab_id,
+                     Reservation.start_date < end_date, 
+                     Reservation.end_date > start_date
+                    )
+                )
+        
+        result = await self.session.execute(stmt)
+        conflicts = result.scalar_one_or_none()
+        
+        return conflicts
+    
+    async def __is_deletable(self, reservation: Reservation) -> bool:
+        return reservation.status in [ReservationStatus.pending, ReservationStatus.completed, ReservationStatus.cancelled, ReservationStatus.rejected]
+    
+    async def __check_existing_reservation(self, user_id: int):
+        
+        stmt = (select(Reservation)
+                .where(Reservation.user_id == user_id)
+                .where(Reservation.status.in_([ReservationStatus.pending, ReservationStatus.reserved, ReservationStatus.in_use])))
         
         try:
             result = await self.session.execute(stmt)
-            existing_reservation = result.scalar_one_or_none()
-        
+            existing_reservation = result.scalars().all()
+            
         except IntegrityError as e:
             print(f"Integrity error in check_existing_reservation : {e}")
             raise HTTPException(status_code=400, detail="Reservation for User already exists")
@@ -78,6 +99,37 @@ class ReservationService(BaseService):
         
         return existing_reservation
             
+    
+    async def user_create_reservation(self, payload: ReservationCreate):
+        existing_reservation = await self.__check_existing_reservation(payload.user_id)
+        
+        if existing_reservation:    
+            raise HTTPException(status_code=409, detail="You still have an existing reservation")
+        
+        conflicts = await self.__check_conflict(payload.lab_id, payload.start_date, payload.end_date)
+        
+        if conflicts:
+            raise HTTPException(status_code=409, detail="Date conflicts")
+
+        reservation = Reservation(**payload.model_dump())
+        self.session.add(reservation)
+        
+        try:
+            await self.session.commit()
+            
+        except IntegrityError as e:
+            await self.session.rollback()
+            print(f"Integrity error in user_create_reservation : {e}")
+            raise HTTPException(status_code=400, detail="Reservation already exists")
+        
+        except SQLAlchemyError as e:
+            await self.session.rollback()
+            print(f"Database error in user_create_reservation (commit) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to create reservation")
+        
+        await self.session.refresh(reservation)
+        
+        return reservation
     
     async def create_reservation(self, payload: ReservationCreate):        
         conflicts = await self.__check_conflict(payload.lab_id, payload.start_date, payload.end_date)
@@ -143,6 +195,24 @@ class ReservationService(BaseService):
         
         return reservation
     
+    async def get_user_reservation(self, user_id):
+        
+        stmt = (select(Reservation).where(Reservation.user_id == user_id)
+                .join(Reservation.user)
+                .join(Users.users_information)
+                .options(joinedload(Reservation.user).joinedload(Users.users_information))
+                )
+        
+        try: 
+            result = await self.session.execute(stmt)
+            user_reservations = result.scalars().all()
+            
+        except SQLAlchemyError as e:
+            print(f"Database error in get_user_reservation (fetch) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to fetch reservations")
+        
+        return user_reservations
+    
     
     async def search_reservation(self, search: str) -> list[ReservationResponse]:
         
@@ -153,9 +223,8 @@ class ReservationService(BaseService):
         
         if search:
             stmt = stmt.where(or_(
-                UsersInformation.first_name.ilike(f"%{search}%"),
-                UsersInformation.last_name.ilike(f"%{search}%"),
-                UsersInformation.program.ilike(f"%{search}%")
+                Reservation.full_name.ilike(f"%{search}%"),
+                UsersInformation.department.ilike(f"%{search}%")
             ))
         
         try:
@@ -171,7 +240,7 @@ class ReservationService(BaseService):
     
     async def update_reservation(self, payload: ReservationUpdate, reservation_id) -> ReservationCreateResponse:
         
-        reservation = await self.__fetch_reservation_by_id(reservation_id)
+        reservation = await self._fetch_reservation_by_id(reservation_id)
         
         if not reservation: 
             raise HTTPException(status_code=404, detail="Reservation not found")
@@ -186,10 +255,6 @@ class ReservationService(BaseService):
         
         try:
             await self.session.commit()
-        
-        except IntegrityError as e:
-            print(f"Integrity error in update_reservation : {e}")
-            raise HTTPException(status_code=400, detail="Reservation already exists")
 
         except SQLAlchemyError as e:
             print(f"Database error in update_reservation (commit) : {e}")
@@ -199,13 +264,84 @@ class ReservationService(BaseService):
         
         return reservation
     
+    async def user_update_reservation(self, user_id: int,payload: ReservationUpdate, reservation_id): 
+        
+        stmt = (select(Reservation)
+                .where(and_(Reservation.id == reservation_id, 
+                            Reservation.user_id == user_id)))
+        
+        try: 
+            result = await self.session.execute(stmt)
+            reservation = result.scalar_one_or_none()
+            
+        except SQLAlchemyError as e:
+            print(f"Database error in user_update_reservation (fetch) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to fetch user reservation")
+        
+        if not reservation:
+            raise HTTPException(status_code=404, detail="Reservation not found")
+        
+        if reservation.status != ReservationStatus.pending:
+            raise HTTPException(status_code=409, detail="Reservation can only be updated when reservation is pending")
+        
+        reservation_conflicts = await self.__has_date_conflict(reservation.id, payload.lab_id, payload.start_date, payload.end_date)
+                
+        if reservation_conflicts:
+            raise HTTPException(status_code=409, detail="Conflict between dates!")
+        
+        for key, value in payload.model_dump(exclude_unset=True).items():
+            setattr(reservation, key, value)
+            
+        try:
+            await self.session.commit()
+        
+        except SQLAlchemyError as e:
+            await self.session.rollback()
+            print(f"Database error in user_update_reservation (commit) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to update reservation")
+        
+        await self.session.refresh(reservation)
+        
+        return reservation
     
+    async def user_delete_reservation(self, reservation_id, user_id):
+        stmt = (select(Reservation)
+                .where(and_(Reservation.id == reservation_id, 
+                            Reservation.user_id == user_id)))
+        
+        try: 
+            result = await self.session.execute(stmt)
+            reservation = result.scalar_one_or_none()
+            
+        except SQLAlchemyError as e:
+            print(f"Database error in user_update_reservation (fetch) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to fetch user reservation")
+        
+        if not reservation:
+            raise HTTPException(status_code=404, detail="Reservation not found")
+        
+        deletable = await self.__is_deletable(reservation)
+                
+        if not deletable:
+            raise HTTPException(status_code=409, detail="Reservation cannot be deleted at its current status")
+        
+        try:
+            await self.session.delete(reservation)
+            await self.session.commit()
+            
+        except SQLAlchemyError as e:
+            await self.session.rollback()
+            print(f"Database error in user_delete_reservation (commit) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to delete reservation")
+        
+        return "deleted"
+
     async def delete_reservation(self, reservation_id) -> str:
         
         if not reservation_id:
             raise HTTPException(status_code=400, detail="No Reservation ID found")
         
-        reservation = await self.__fetch_reservation_by_id(reservation_id)
+        reservation = await self._fetch_reservation_by_id(reservation_id)
         
         if not reservation:
             raise HTTPException(status_code=404, detail="Reservation not found")
@@ -224,7 +360,7 @@ class ReservationService(BaseService):
     
     async def update_reservation_status(self, reservation_id, status: ReservationStatus) -> ReservationCreateResponse:
         
-        reservation = await self.__fetch_reservation_by_id(reservation_id)
+        reservation = await self._fetch_reservation_by_id(reservation_id)
         
         if not reservation:
             raise HTTPException(status_code=404, detail="Reservation not found")

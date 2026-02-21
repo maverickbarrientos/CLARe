@@ -1,8 +1,10 @@
 from fastapi import HTTPException
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
 from models.computer_lab import ComputerLab
+from models.reservation import Reservation
 
 from .base import BaseService
 from schemas.computer_lab_schema import ComputerLabCreate, ComputerLabResponse, ComputerLabUpdate
@@ -42,6 +44,21 @@ class ComputerLabService(BaseService):
         
         return computer_lab
     
+    async def get_lab_reservations(self, lab_id):
+        
+        stmt = (select(ComputerLab).where(ComputerLab.id == lab_id)
+                .options(joinedload(ComputerLab.reservations))
+                )
+        
+        try:
+            result = await self.session.execute(stmt)
+            computer_lab_reservations = result.unique().scalars().all()
+            
+        except SQLAlchemyError as e:
+            print(f"Database error in get_lab_reservations (fetch) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to fetch computer lab's reservations")
+        
+        return computer_lab_reservations
     
     async def create_lab(self, computer_lab: ComputerLabCreate) -> ComputerLabResponse:
         

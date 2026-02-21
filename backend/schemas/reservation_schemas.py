@@ -12,6 +12,7 @@ class ReservationStatus(enum.Enum):
     rejected = "rejected"
     in_use = "in_use"
     cancelled = "cancelled"
+    pending_cancellation = "pending_cancellation"
     completed = "completed"
     
 class ReservationCreate(BaseModel):
@@ -42,4 +43,3 @@ class ReservationUpdate(BaseModel):
     full_name: Optional[str] = None
     start_date: Optional[datetime] = None 
     end_date: Optional[datetime] = None
-    status: Optional[ReservationStatus] = None
