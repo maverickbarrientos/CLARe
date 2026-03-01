@@ -21,3 +21,13 @@ export function timeFormatter(currentTime) {
 
     return formattedTime
 }
+
+export function formatDateTime(dateTime) {
+    return dateTime.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+}

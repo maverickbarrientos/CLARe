@@ -21,6 +21,11 @@
   --color-text-secondary: #CCCCCC;
   --color-glow: #FFB366;
 
+  --color-text-disabled: #4B4B4B;
+
+  --color-success: #1EE84C;
+  --color-danger: #DC3545;
+
   --font-heading: 'Montserrat';
   --font-sans: 'Inter';
 
@@ -46,13 +51,30 @@
   background-color: var(--color-dark-gray);
 }
 
+.bg-success {
+  background-color: var(--color-success);
+}
+
+.bg-danger {
+  background-color: var(--color-danger);
+}
+
 .text-secondary {
   color: var(--color-text-secondary);
+}
+
+.text-disabled {
+  color: var(--color-text-disabled)
 }
 
 .text-glow {
   color: var(--color-glow);
   box-shadow: 0px 0px 10px rgba(255, 110, 1, 0.6)
+}
+
+.today {
+  border: 2px solid #FFB366;
+  box-shadow: 0px 0px 10px rgba(255, 110, 1, 0.6);
 }
 
 .font-heading {
@@ -71,6 +93,14 @@
 .border-glow {
   border: 1px solid #FFB366;
   box-shadow: inset 0px 0px 10px rgba(255, 110, 1, 0.6);
+}
+
+.border-global {
+  border: 1px solid #FFB366;
+}
+
+.border-b-stroke {
+  border-bottom: 1px solid #FFB366;
 }
 
 body {

@@ -7,6 +7,8 @@ export function ComputerLab() {
             <title>CLARe | Computer Lab</title>
             
             <PageTitle pageTitle="Computer Lab"/>
+
+            
             
         </>
     )
