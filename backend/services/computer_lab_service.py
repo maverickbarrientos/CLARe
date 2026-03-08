@@ -14,9 +14,9 @@ class ComputerLabService(BaseService):
     async def get_all_labs(self) -> list[ComputerLabResponse]:
         
         try:
-            stmt = select(ComputerLab)
+            stmt = select(ComputerLab).options(joinedload(ComputerLab.reservations))
             result = await self.session.execute(stmt)
-            computer_labs = result.scalars().all()
+            computer_labs = result.unique().scalars().all()
         
         except SQLAlchemyError as e:
             print(f"An unexpected SQLAlchemy error occurred : {e}")
@@ -31,9 +31,10 @@ class ComputerLabService(BaseService):
     async def get_lab_by_id(self, lab_id: int) -> ComputerLabResponse:
         
         try:
-            stmt = select(ComputerLab).where(ComputerLab.id == lab_id)
+            stmt = (select(ComputerLab).where(ComputerLab.id == lab_id)
+                    .options(joinedload(ComputerLab.reservations)))
             result = await self.session.execute(stmt)
-            computer_lab = result.scalar_one_or_none()
+            computer_lab = result.unique().scalar_one_or_none()
         
         except SQLAlchemyError as e:
             print(f"An unexpected SQLAlchemy error occurred : {e}")

@@ -10,8 +10,9 @@ class QRCode(Base):
     __tablename__ = "qr_codes"
     
     id: int = Column(Integer, primary_key=True, autoincrement=True)
-    reservation_id: int = Column(ForeignKey("reservations.id", onupdate="CASCADE", ondelete="CASCADE"))
+    reservation_id: int = Column(ForeignKey("reservations.id", onupdate="CASCADE", ondelete="CASCADE"), unique=True)
     qr_value: str = Column(String(255))
+    image_url: str = Column(String(500))
     issue_date: datetime = Column(DateTime)
     expiry_date: datetime = Column(DateTime)
     status: str = Column(Enum(QRCodeStatus), default=QRCodeStatus.valid)

@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from fastapi_users.exceptions import UserNotExists
@@ -13,13 +13,21 @@ from schemas.user_schemas import UserInformationCreate, UserCreate, UserResponse
 
 class UserService(BaseService):
     
-    async def get_all_users(self):
+    async def get_all_users(self, search: str):
         
         stmt = select(Users).options(selectinload(Users.users_information))
         
+        if search:
+            stmt = stmt.where(or_(
+                Users.email.ilike(f"%{search}%"),
+                UsersInformation.first_name.ilike(f"%{search}%"),
+                UsersInformation.last_name.ilike(f"%{search}%"),
+                UsersInformation.department.ilike(f"%{search}%")
+            ))
+        
         try:
             result = await self.session.execute(stmt)
-            users = result.scalars().all()
+            users = result.unique().scalars().all()
             
         except SQLAlchemyError as e:
             print(f"Database error in get_all_users (fetch) : {e}")
@@ -99,13 +107,14 @@ class UserService(BaseService):
         return new_user_information
     
     
-    async def update_user(self, user_id, payload):
+    async def update_user(self, user_id, update_user, user_information_payload, user_manager: UserManager):
         
         stmt = select(UsersInformation).where(UsersInformation.user_id == user_id)
-
+        
         try:
             result = await self.session.execute(stmt)
-            user = result.scalar_one_or_none()
+            user_information = result.scalar_one_or_none()
+            user = await user_manager.get(user_id)
             
         except SQLAlchemyError as e:
             print(f"Database error in update_user (fetch) : {e}")
@@ -114,12 +123,13 @@ class UserService(BaseService):
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
-        for key, value in payload.model_dump(exclude_unset=True).items():
-            setattr(user, key, value)
+        for key, value in user_information_payload.model_dump(exclude_unset=True).items():
+            setattr(user_information, key, value)
             
         try:
             await self.session.commit()
-            await self.session.refresh(user)
+            await self.session.refresh(user_information)
+            updated_user = await user_manager.update(update_user, user)
         
         except IntegrityError as e:
             await self.session.rollback()
@@ -131,7 +141,8 @@ class UserService(BaseService):
             print(f"Database error in update_user (commit) : {e}")
             raise HTTPException(status_code=500, detail="Failed to update user information")
         
-        return user 
+        return user_information, updated_user
+    
     
     async def delete_user(self, user_id: int, user_manager: UserManager):
         

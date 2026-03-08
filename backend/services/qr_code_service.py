@@ -3,20 +3,40 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.orm import joinedload
 from datetime import timedelta, datetime, timezone
-import qrcode, json, uuid
+import qrcode, json, uuid, shutil, tempfile, os, io
 
 from .base import BaseService
 from models.qr_code import QRCode
 from models.reservation import Reservation
 
-from schemas.qr_code_schemas import QRCodeCreate, QRCodeResponse, QRCodeStatus
-from schemas.reservation_schemas import ReservationCreateResponse
+from schemas.qr_code_schemas import QRCodeCreate, QRCodeResponse
+from schemas.reservation_schemas import ReservationCreateResponse, QRCodeStatus
 
-class QRCodeService(BaseService):  
+from config.imagekit_config import imagekit
+
+class QRCodeService(BaseService):   
     
-    async def __save_qr_to_db(self, payload: QRCodeCreate) -> QRCodeResponse:
+    async def __upload_photo(self, file: io.BytesIO, file_name: str):
+                
+        try:
+            upload_result = imagekit.files.upload(
+                file=file.getvalue(),
+                file_name=file_name,
+                use_unique_file_name=True,
+                tags=["CLARe-QR"]
+            )
+            
+            return upload_result
+            
+        except Exception as e:
+            print(f"ImageKit upload error in (__upload_photo) : {e}")
+            raise HTTPException(status_code=500, detail="Failed uploading image on ImageKit")
         
-        qr_code = QRCode(**payload)
+    
+    async def __save_qr_to_db(self, payload: QRCodeCreate, image_url: str) -> QRCodeResponse:
+        
+        
+        qr_code = QRCode(**payload, image_url=image_url)
         
         self.session.add(qr_code)
         
@@ -57,8 +77,13 @@ class QRCodeService(BaseService):
         
         return qr_code
     
-    async def invalidate_qr_code(self, qr_code):
+    async def invalidate_qr_code(self, qr_value):
         
+        qr_code = await self.__get_qr(qr_value)
+        
+        if not qr_code:
+            raise HTTPException(status_code=404, detail="QR Code not found")
+            
         setattr(qr_code, "status", "invalid")
         
         try:
@@ -114,16 +139,19 @@ class QRCodeService(BaseService):
     async def create_qr_code(self, payload: QRCodeCreate) -> QRCodeResponse:
         
         qr = qrcode.QRCode()
+        buffer = io.BytesIO()
                 
         qr.add_data(str(payload["qr_value"]))
 
         try:
             qr.make(fit=True)    
             img = qr.make_image(fill_color=True, back_color="white")
-            img_name = f"reservation.png"
-            img.save(img_name)
+            img.save(buffer, format="PNG")
+            buffer.seek(0)
+            buffer.name = f"{payload['qr_value']}.png"
+            imagekit_upload = await self.__upload_photo(buffer, f"{payload['qr_value']}.png")
             
-            qr_code = await self.__save_qr_to_db(payload)
+            qr_code = await self.__save_qr_to_db(payload, imagekit_upload.url)
             
         except Exception as e:
             print(f"QR Code generation error (create_qr_code) : {e}")

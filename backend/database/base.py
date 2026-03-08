@@ -2,6 +2,7 @@ from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import Integer
 from sqlalchemy.orm import DeclarativeBase, relationship
+from fastapi_users import FastAPIUsers, BaseUserManager, IntegerIDMixin
 from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable, SQLAlchemyUserDatabase, mapped_column, Mapped
 
 from database.session import engine, get_session

@@ -11,8 +11,8 @@ from services.cancellation_request_service import CancellationRequestService
 from database.session import get_session
 
 from schemas.computer_lab_schema import ComputerLabCreate, ComputerLabResponse, ComputerLabUpdate
-from schemas.user_schemas import UserCreate, UserInformationCreate, UserInformationUpdate, UserResponse, UserCreateResponse
-from schemas.reservation_schemas import ReservationCreate, ReservationUpdate, ReservationStatus, ReservationResponse, ReservationCreateResponse
+from schemas.user_schemas import UserCreate, UserInformationCreate, UserInformationUpdate, UserResponse, UserCreateResponse, UserUpdate
+from schemas.reservation_schemas import ReservationCreate, AdminReservationCreate, ReservationUpdate, ReservationStatus, ReservationResponse, ReservationCreateResponse
 from schemas.qr_code_schemas import QRCodeWithReservation, QRCodeResponse, ApprovalResponse
 
 admin_router = APIRouter()
@@ -98,14 +98,15 @@ ADMIN - USERS ROUTE
 """
 @admin_router.get("/users", response_model=dict[str, list[UserResponse]])
 async def get_users(
+    search: Optional[str] = None,
     user_service: UserService = Depends(user_service_dependency)
 ):
     
-    users = await user_service.get_all_users()
+    users = await user_service.get_all_users(search)
     
     return { "users" : users }
 
-@admin_router.get("/user/{user_id}", response_model=dict[str, UserResponse])
+@admin_router.get("/user/{user_id}", response_model=UserResponse)
 async def get_user_by_id(
     user_id: int,
     user_service: UserService = Depends(user_service_dependency)
@@ -113,7 +114,7 @@ async def get_user_by_id(
     
     user = await user_service.get_user_by_id(user_id)
     
-    return { "user" : user } 
+    return user
 
 @admin_router.post("/create_user", response_model=UserCreateResponse)
 async def create_user(
@@ -127,18 +128,20 @@ async def create_user(
     
     return  new_user
 
-@admin_router.patch("/update_user")
+@admin_router.patch("/update_user/{user_id}")
 async def update_user(
     user_id: int,
-    payload: UserInformationUpdate,
-    user_service: UserService = Depends(user_service_dependency)
+    user: UserUpdate,
+    user_information: UserInformationUpdate,
+    user_service: UserService = Depends(user_service_dependency),
+    user_manager: UserManager = Depends(get_user_manager)
 ):
     
-    updated_user = await user_service.update_user(user_id, payload)
+    updated_user = await user_service.update_user(user_id, user, user_information, user_manager)
     
     return updated_user
 
-@admin_router.delete("/delete_user", response_model=dict[str, str])
+@admin_router.delete("/delete_user/{user_id}", response_model=dict[str, str])
 async def delete_user(
     user_id: int,
     user_service: UserService = Depends(user_service_dependency),
@@ -157,12 +160,23 @@ ADMIN - RESERVATION ROUTE
 
 @admin_router.get("/reservations", response_model=dict[str, list[ReservationResponse]])
 async def get_all_reservations(
+    search: Optional[str] = None,
     reservation_service: ReservationService = Depends(reservation_service_dependency)
 ):
     
-    reservations = await reservation_service.get_all_reservations()
+    reservations = await reservation_service.get_all_reservations(search)
     
     return { "reservations" : reservations }
+
+@admin_router.get("/user_reservations/{user_id}")
+async def get_user_reservations(
+    user_id: int,
+    reservation_service: ReservationService = Depends(reservation_service_dependency)
+):
+    
+    user_reservations = await reservation_service.get_user_reservations(user_id)
+    
+    return user_reservations
 
 @admin_router.get("/reservation/{reservation_id}", response_model=dict[str, ReservationResponse])
 async def get_reservation_by_id(
@@ -185,7 +199,7 @@ async def search_reservation(
 
 @admin_router.post("/custom_reservation", response_model=dict[str, ReservationCreateResponse])
 async def custom_reservation(
-    reservation: ReservationCreate,
+    reservation: AdminReservationCreate,
     reservation_service: ReservationService = Depends(reservation_service_dependency)
 ):
 
@@ -269,3 +283,13 @@ async def verify_qr_code(
     qr_with_reservation = await qr_code_service.verify_qr(qr_value)
     
     return qr_with_reservation
+
+@admin_router.patch("/qr_code/{qr_value}/invalidate")
+async def invalidate_qr(
+    qr_value: str,
+    qr_code_service: QRCodeService = Depends(qr_service_dependency)
+):
+    
+    result = await qr_code_service.invalidate_qr_code(qr_value)
+    
+    return result

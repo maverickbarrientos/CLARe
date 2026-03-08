@@ -4,7 +4,7 @@ from datetime import datetime
 
 from schemas.reservation_schemas import ReservationCreateResponse
 
-class QRCodeStatus(enum.Enum):
+class QRCodeStatus(str, enum.Enum):
     valid = "valid"
     invalid = "invalid"
     expired = "expired"

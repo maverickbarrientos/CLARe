@@ -50,4 +50,4 @@ auth_backend = AuthenticationBackend(name="jwt",
 fastapi_users = FastAPIUsers(get_user_manager=get_user_manager,
                              auth_backends=[auth_backend])
 
-current_active_user = fastapi_users.current_user
+current_active_user = fastapi_users.current_user(active=True)

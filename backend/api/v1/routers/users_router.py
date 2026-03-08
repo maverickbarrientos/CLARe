@@ -2,6 +2,9 @@ from fastapi import APIRouter, Depends
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.session import get_session
+from database.base import Users
+
+from config.security import fastapi_users, current_active_user
 
 from services.computer_lab_service import ComputerLabService
 from services.reservation_service import ReservationService
@@ -53,10 +56,11 @@ async def computer_lab(
 @users_router.post("/create_reservation")
 async def create_reservation(
     reservation: ReservationCreate,
+    user: Users = Depends(current_active_user),
     reservation_service: ReservationService = Depends(reservation_service_dependency)
 ):
     
-    new_reservation = await reservation_service.user_create_reservation(reservation)
+    new_reservation = await reservation_service.user_create_reservation(reservation, user)
     
     return new_reservation
 

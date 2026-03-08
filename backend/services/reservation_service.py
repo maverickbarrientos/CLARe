@@ -9,9 +9,11 @@ from models.reservation import Reservation
 from models.users_information import UsersInformation
 from database.base import Users
 
-from schemas.reservation_schemas import ReservationStatus, ReservationCreate, ReservationUpdate, ReservationResponse, ReservationCreateResponse
+from schemas.reservation_schemas import ReservationStatus, ReservationCreate, AdminReservationCreate, ReservationUpdate, ReservationResponse, ReservationCreateResponse
 
-class ReservationService(BaseService):
+from .qr_code_service import QRCodeService
+
+class ReservationService(QRCodeService):
     
     # async def __get_reservations(self):
     #     stmt = (select(Reservation)
@@ -44,7 +46,7 @@ class ReservationService(BaseService):
     
     async def __check_conflict(self,lab_id, start_date, end_date):
                 
-        if start_date < datetime.now(timezone.utc):
+        if start_date < datetime.now():
             return { "success" : False, "message" : "Reservation must be made at least 2 days in advance" }
         
         stmt = select(Reservation).where(
@@ -60,7 +62,7 @@ class ReservationService(BaseService):
         return conflicts
     
     async def __has_date_conflict(self, reservation_id, lab_id, start_date, end_date):
-        if start_date < datetime.now(timezone.utc):
+        if start_date < datetime.now():
             return { "success" : False, "message" : "Reservation must be made at least 2 days in advance" }
         
         stmt = select(Reservation).where(
@@ -100,7 +102,7 @@ class ReservationService(BaseService):
         return existing_reservation
             
     
-    async def user_create_reservation(self, payload: ReservationCreate):
+    async def user_create_reservation(self, payload: ReservationCreate, user: Users):
         existing_reservation = await self.__check_existing_reservation(payload.user_id)
         
         if existing_reservation:    
@@ -111,7 +113,7 @@ class ReservationService(BaseService):
         if conflicts:
             raise HTTPException(status_code=409, detail="Date conflicts")
 
-        reservation = Reservation(**payload.model_dump())
+        reservation = Reservation(**payload.model_dump(), email=user.email)
         self.session.add(reservation)
         
         try:
@@ -131,7 +133,7 @@ class ReservationService(BaseService):
         
         return reservation
     
-    async def create_reservation(self, payload: ReservationCreate):        
+    async def create_reservation(self, payload: AdminReservationCreate):  
         conflicts = await self.__check_conflict(payload.lab_id, payload.start_date, payload.end_date)
         
         if conflicts:
@@ -153,15 +155,31 @@ class ReservationService(BaseService):
         
         print("Generate QR Code")
         
+        if reservation.status == ReservationStatus.reserved:
+            qr_payload = await self.generate_qr_data(reservation)
+            qr_code = await self.create_qr_code(qr_payload)
+        
         return reservation
     
     
-    async def get_all_reservations(self) -> list[ReservationResponse]:
+    async def get_all_reservations(self, search: str) -> list[ReservationResponse]:
     
         stmt = (select(Reservation)
                 .join(Reservation.user)
                 .join(Users.users_information)
-                .options(joinedload(Reservation.user).joinedload(Users.users_information)))
+                .join(Reservation.computer_labs)
+                .outerjoin(Reservation.qr_codes)
+                .options(
+                    joinedload(Reservation.user).joinedload(Users.users_information),
+                    joinedload(Reservation.computer_labs),
+                    joinedload(Reservation.qr_codes)
+                ))
+        
+        if search:
+            stmt = stmt.where(or_(
+                    Reservation.full_name.ilike(f"%{search}%"),
+                    UsersInformation.department.ilike(f"%{search}%")
+                ))
         
         try:
             result = await self.session.execute(stmt)
@@ -179,7 +197,11 @@ class ReservationService(BaseService):
         stmt = (select(Reservation).where(Reservation.id == reservation_id)
                 .join(Reservation.user)
                 .join(Users.users_information)
-                .options(joinedload(Reservation.user).joinedload(Users.users_information))
+                .join(Reservation.computer_labs)
+                .outerjoin(Reservation.qr_codes)
+                .options(joinedload(Reservation.user).joinedload(Users.users_information),
+                         joinedload(Reservation.computer_labs),
+                         joinedload(Reservation.qr_codes))
                 )
         
         try:
@@ -195,13 +217,16 @@ class ReservationService(BaseService):
         
         return reservation
     
-    async def get_user_reservation(self, user_id):
+    async def get_user_reservations(self, user_id):
         
         stmt = (select(Reservation).where(Reservation.user_id == user_id)
                 .join(Reservation.user)
                 .join(Users.users_information)
-                .options(joinedload(Reservation.user).joinedload(Users.users_information))
-                )
+                .join(Reservation.computer_labs)
+                .options(
+                    joinedload(Reservation.user).joinedload(Users.users_information),
+                    joinedload(Reservation.computer_labs)
+                ))
         
         try: 
             result = await self.session.execute(stmt)
