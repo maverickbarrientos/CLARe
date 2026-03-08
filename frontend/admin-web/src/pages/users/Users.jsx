@@ -31,7 +31,7 @@ export function Users() {
                 </div>
 
                 <NavLink to="/new_user" className="col-start-2 justify-self-end">
-                    <button className="border py-2 px-4 rounded-lg font-sans">Add User</button>
+                    <button className="border-glow bg-glow py-2 px-4 rounded-lg font-heading font-bold">Add User</button>
                 </NavLink>
             </div>
 

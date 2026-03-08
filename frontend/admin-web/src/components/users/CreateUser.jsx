@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useCreateUser } from "../hooks/users/useCreateUser";
+import { useCreateUser } from "../../hooks/users/useCreateUser";
 import { UserForm } from "./UserForm";
 
 export function CreateUser () {

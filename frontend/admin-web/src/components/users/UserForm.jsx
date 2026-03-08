@@ -1,3 +1,4 @@
+import { InputField } from "../shared/InputField"
 
 export function UserForm({ form, handleChange, onSubmit, loading, submitLabel }) {
 
@@ -40,41 +41,25 @@ export function UserForm({ form, handleChange, onSubmit, loading, submitLabel })
                 
                 <div className="w-3/4">
                     <div className="grid grid-cols-2 gap-5 mb-5">
-                        <div>
-                            <p className="font-heading">First Name *</p>
-                            <input type="text" name="first_name" className="py-2 px-4 rounded-lg border-global font-sans w-full" 
-                                onChange={(e) => handleChange(e, "user_information")}
-                                value={form.user_information.first_name}/>
-                        </div>
-                        <div>
-                            <p className="font-heading">Last Name *</p>
-                            <input type="text" name="last_name" className="py-2 px-4 rounded-lg border-global font-sans w-full" 
-                                onChange={(e) => handleChange(e, "user_information")}
-                                value={form.user_information.last_name}/>
-                        </div>
+                        <InputField inputTitle="First Name *" handleChange={handleChange} name="first_name"
+                                    section="user_information" value={form.user_information.first_name}
+                                    placeholder="John" fieldType={"text"}/>
+                        <InputField inputTitle="Last Name *" handleChange={handleChange} name="last_name"
+                                    section="user_information" value={form.user_information.last_name}
+                                    placeholder="Doe" fieldType={"text"}/>
                     </div>
 
                     <div className="grid grid-cols-2 gap-5">
-                        <div>
-                            <p className="font-heading">Email *</p>
-                            <input type="text" name="email" className="py-2 px-4 rounded-lg border-global font-sans w-full" 
-                                onChange={(e) => handleChange(e, "user")}
-                                value={form.user.email}/>
-                        </div>
+                        <InputField inputTitle="Email *" handleChange={handleChange} name="email"
+                                    section="user" value={form.user.email}
+                                    placeholder="johndoe@example.com" fieldType={"text"}/>
                         
-                        <div>
-                            <p className="font-heading">Password *</p>
-                            <input type="password" name="password" className="py-2 px-4 rounded-lg border-global font-sans w-full" 
-                                onChange={(e) => handleChange(e, "user")} 
-                                value={form.user.password}/>
-                        </div>
-
-                        <div>
-                            <p className="font-heading">Department *</p>
-                            <input type="text" name="department" className="py-2 px-4 rounded-lg border-global font-sans w-full" 
-                                onChange={(e) => handleChange(e, "user_information")}
-                                value={form.user_information.department}/>
-                        </div>
+                        <InputField inputTitle="Password *" handleChange={handleChange} name="password"
+                                    section="user" value={form.user.password} fieldType={"password"}/>
+                        
+                        <InputField inputTitle="Department *" handleChange={handleChange} name="department"
+                                    section="user_information" value={form.user_information.department}
+                                    placeholder="BSIT" fieldType={"text"}/>
                     </div>
 
 

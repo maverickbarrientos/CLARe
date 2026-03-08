@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { UserForm } from "./UserForm";
-import { updateUser } from "../services/userService";
+import { updateUser } from "../../services/userService";
 
 export function UpdateUserForm ({ user }) {
 
@@ -26,6 +26,7 @@ export function UpdateUserForm ({ user }) {
                 [e.target.name]: e.target.value
             }
         })
+        console.log(form);
     }
 
     const handleSubmit = async (e) => {

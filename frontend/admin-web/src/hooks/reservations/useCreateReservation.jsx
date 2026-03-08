@@ -1,14 +1,14 @@
+import { createReservation } from "../../services/reservationService";
 import { useState } from "react";
-import { createUser } from "../../services/userService";
 
-export function useCreateUser() {
+export function useCreateReservation () {
 
-    const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [loading, setLoading] = useState(true);
 
     const create = async (payload) => {
         try {
-            const response = await createUser(payload);
+            const response = await createReservation(payload);
             return response;
         } catch (error) {
             setError(error);

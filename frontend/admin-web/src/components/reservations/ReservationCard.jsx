@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom';
 export function ReservationCard({ reservation, computerLab, name, department, time, status, className = "" }) {
 
     return (
-        <div className={`relative text-left border-glow p-5 rounded-2xl font-sans ${className}`}>
+        <div className={`relative text-left border-global p-5 rounded-2xl font-sans ${className}`}>
   
             <p className="font-heading font-bold text-3xl">{computerLab}</p>
             <p>{name}</p>
