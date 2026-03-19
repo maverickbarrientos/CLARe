@@ -4,9 +4,10 @@ import { deleteUser } from "../../services/userService";
 export function useDeleteUser() {
 
     const [error, setError] = useState("");
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
 
     const remove = async (id) => {
+        setLoading(true);
         try{
             const response = await deleteUser(id);
             return response

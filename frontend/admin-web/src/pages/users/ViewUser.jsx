@@ -4,17 +4,19 @@ import { useUserReservations } from "../../hooks/users/useUserReservations";
 import { formatDateTime } from "../../utils/dateFormatter";
 import { SubPageTitle } from "../../components/SubPageTitle";
 import { DetailsPanel } from "../../components/shared/DetailsPanel";
+import { Modal } from "../../components/shared/Modal";
 
 export function ViewUser() {
 
     const { user, error: userError, loading: userLoading } = useUser();
     const { reservations, error: reservationsError, loading: reservationsLoading } = useUserReservations();
 
-    if (userLoading || reservationsLoading) return <p>Loading...</p>
     if (userError || reservationsError) return <p>Error...</p>
 
     return (
         <div>
+            { (userLoading || reservationsLoading) && <Modal type={"loading"} title={"Processing"} subTitle={"Please wait while we fetch user data."} /> }
+            
 
             <SubPageTitle to="/users" label="Back to Users" 
                           title={ ` ${user.users_information.first_name} ${user.users_information.last_name}` }

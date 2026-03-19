@@ -3,16 +3,18 @@ import { useComputerLab } from "../../hooks/computer_labs/useComputerLab"
 import { useCreateReservation } from "../../hooks/reservations/useCreateReservation";
 import { ReservationForm } from "./ReservationForm"
 import { Card } from "../Card";
+import { Modal } from "../shared/Modal";
 
 export function CreateReservation () {
 
-    const { create } = useCreateReservation();
-    const { computerLab, loading } = useComputerLab();
+    const { create, loading: createLoading } = useCreateReservation();
+    const { computerLab, loading: computerLabLoading } = useComputerLab();
 
     const [form, setForm] = useState({
         user_id: 12,
         lab_id: 0,
         full_name: "",
+        department: "",
         email: "",
         reservation_description: "",
         start_date: "",
@@ -20,7 +22,7 @@ export function CreateReservation () {
         status: "reserved"
     });
 
-    if (loading) return <p>Loading...</p>;
+    if (computerLabLoading) return <Modal type={"loading"} title={"Loading Computer Lab"} subTitle={"Please wait while we fetch laboratory data."} />;
 
     const handleChange = (e) => {
         setForm({
@@ -37,6 +39,7 @@ export function CreateReservation () {
     return (
 
         <div>
+            { createLoading && <Modal type={"loading"} title={"Creating Reservation"} subTitle={"Please wait while we process your reservation."} /> }
             <div className="text-left w-3/12 my-4">
                 <p className="text-xl font-bold font-heading my-2">Computer Lab</p>
                 <Card className="text-left p-2 pr-10" cardTitle={computerLab.lab_name}>
@@ -46,7 +49,7 @@ export function CreateReservation () {
 
             <div className="text-left my-4">
                 <p className="text-xl font-bold font-heading my-2">Reservation Information</p>
-                <ReservationForm handleChange={handleChange} onSubmit={handleSubmit} />
+                <ReservationForm handleChange={handleChange} onSubmit={handleSubmit} form={form} />
             </div>
         </div>
 

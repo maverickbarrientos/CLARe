@@ -1,8 +1,10 @@
 import { useEffect, useState, useRef } from "react";
 import { getReservations } from "../../services/reservationService";
+import { useSocket } from "../useSocket";
 
 export function useReservations() {
 
+    const { socketio, isConnected } = useSocket();
     const [reservations, setReservations] = useState([]);
     const [search, setSearch] = useState("");
     const [error, setError] = useState("");
@@ -30,6 +32,18 @@ export function useReservations() {
 
         return () => clearTimeout(delay)
     }, [search])
+
+    useEffect(() => {
+        if (!isConnected) return
+
+        socketio.on('reservations', (data) => {
+            console.log(data);
+            setReservations(prev => 
+                [...prev, data]
+            )
+        })
+
+    }, [isConnected])
 
     return { reservations, search, setSearch, error, loading }
 

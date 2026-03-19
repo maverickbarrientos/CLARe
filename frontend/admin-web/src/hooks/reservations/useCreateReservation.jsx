@@ -1,15 +1,18 @@
-import { createReservation } from "../../services/reservationService";
 import { useState } from "react";
+import { useSocket } from "../useSocket";
 
 export function useCreateReservation () {
 
+    const { socketio, isConnected } = useSocket();
     const [error, setError] = useState("");
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
 
     const create = async (payload) => {
+        if (!isConnected) return;
+        
+        setLoading(true);
         try {
-            const response = await createReservation(payload);
-            return response;
+            socketio.emit('create_reservation', payload)
         } catch (error) {
             setError(error);
         } finally {

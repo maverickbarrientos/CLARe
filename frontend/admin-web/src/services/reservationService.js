@@ -42,3 +42,30 @@ export const createReservation = async ( payload ) => {
     return response.data
 
 }
+
+export const approveCancellation = async ( reservation_id ) => {
+
+    const response = await api.patch(`/approve_cancellation/${reservation_id}`);
+    return response.data
+
+}
+
+export const rejectCancellation = async ( reservation_id ) => {
+
+    const response = await api.patch(`/reject_cancellation/${reservation_id}`);
+    return response.data
+
+}
+
+export const updateReservation = async ( payload, reservation_id ) => {
+
+    const response = await api.patch(`/update_reservation/${reservation_id}`, payload);
+    return response.data;
+
+}
+
+export const getWeeklyEvents = async (startOfWeek) => {
+    console.log("YOOOOOOOOOOOOOOOO", startOfWeek);
+    const response = await api.get(`/weekly_events?start_of_week=${startOfWeek}`);
+    return response.data;
+}

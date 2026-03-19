@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { UserForm } from "./UserForm";
-import { updateUser } from "../../services/userService";
+import { useUpdateUser } from "../../hooks/users/useUpdateUser";
+import { Modal } from "../shared/Modal";
 
 export function UpdateUserForm ({ user }) {
 
+    const { update, error, loading } = useUpdateUser();
     const [form, setForm] = useState({
         user : {
             email : user.email,
@@ -15,8 +17,6 @@ export function UpdateUserForm ({ user }) {
             department: user.users_information.department
         }
     });
-
-
 
     const handleChange = (e, section) => {
         setForm({
@@ -30,11 +30,16 @@ export function UpdateUserForm ({ user }) {
     }
 
     const handleSubmit = async (e) => {
-        e.preventDefault()
-        console.log(form)
-        updateUser(user.id, form)
+        e.preventDefault();
+        console.log(form);
+        update(user.id, form);
     }
 
-    return <UserForm form={form} handleChange={handleChange} onSubmit={handleSubmit} submitLabel="Update" />
+    return (
+        <div>
+            { loading && <Modal type={"loading"} title={"Updating User"} subTitle={"Please wait while we update user information."} /> }
+            <UserForm form={form} handleChange={handleChange} onSubmit={handleSubmit} submitLabel="Update" />
+        </div>
+    )
 
 }

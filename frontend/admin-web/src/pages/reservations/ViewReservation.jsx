@@ -5,18 +5,20 @@ import { formatDateTime } from "../../utils/dateFormatter";
 import { SubPageTitle } from "../../components/SubPageTitle";
 import { DetailsPanel } from "../../components/shared/DetailsPanel";
 import { ReservationStatusCard, ReservationActionButton } from "../../components/reservations/index";
+import { Modal } from "../../components/shared/Modal";
 
 export function ViewReservation() {
 
     const { reservation, error, loading } = useReservation();
 
     if (error) return <p>Error...</p>;
-    if (loading) return <p>Loading...</p>;
+    if (loading) return <Modal type={"loading"} title={"Processing"} subTitle={"Please wait while we retrieve reservation details."} />
 
     console.log(reservation);
 
     return (
         <div>
+
             <SubPageTitle to="/reservations" label="Back to Reservations" 
                 title={`Reservation of ${ reservation.full_name }`}
                 subTitle="Review the reservation details and current status" />
@@ -45,10 +47,13 @@ export function ViewReservation() {
                     <DetailsPanel title="Department" content={ reservation.user.users_information.department } />
                     <DetailsPanel title="Start Date" content={ formatDateTime(new Date(reservation.start_date))  } />
                     <DetailsPanel title="End Date" content={ formatDateTime(new Date(reservation.end_date))  } />
-                    <DetailsPanel title="Description" content={ reservation.description } />
+                    <DetailsPanel title="Description" content={ reservation.reservation_description } />
+                    { reservation.status === "cancellation_requested" || (reservation.status === "cancelled") &&
+                        <DetailsPanel title="Cancellation Reason" content={reservation.cancellation_requests.cancellation_reason}/>  }
                 </div>
 
-                { reservation.status === "pending" && <ReservationActionButton /> }
+                { reservation.status === "pending" && <ReservationActionButton type="reservation" /> }
+                { reservation.status === "cancellation_requested" && <ReservationActionButton type="cancellation" /> }
 
             </div>
         </div>

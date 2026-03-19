@@ -15,6 +15,10 @@ export function Sidebar() {
         <NavLink to="/">
           Dashboard
         </NavLink>
+
+        <NavLink to="/lab_class">
+          Class
+        </NavLink>
         
         <NavLink to="/reservations">
           Reservations

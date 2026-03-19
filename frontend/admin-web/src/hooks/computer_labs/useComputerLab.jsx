@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getComputerLab } from "../../services/computerLabService";
 import { useParams } from "react-router-dom";
 
@@ -20,7 +20,7 @@ export function useComputerLab () {
         }
     }
 
-    useState(() => {
+    useEffect(() => {
         fetchComputerLab();
     }, [lab_id]);
  

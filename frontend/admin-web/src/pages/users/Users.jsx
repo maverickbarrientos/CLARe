@@ -2,6 +2,7 @@ import { NavLink } from "react-router-dom"
 import { PageTitle } from "../../components/PageTitle"
 import { useUsers } from "../../hooks/users/useUsers"
 import { useDeleteUser } from "../../hooks/users/useDeleteUser";
+import { Modal } from "../../components/shared/Modal";
 
 export function Users() {
 
@@ -13,14 +14,18 @@ export function Users() {
         fetchUsers()
     }
 
-    if (usersLoading) return <p>Loading...</p>
     if (usersError) return <p>{ usersError }</p>
+    console.log(users)
 
     return (
-        <>
+        <div>
             <title>CLARe | Users</title>
             
             <PageTitle pageTitle="Users"/>
+
+            { usersLoading && <Modal type={"loading"} title={"Loading Users"} subTitle={"Please wait while we fetch user data."} /> }
+            { removeLoading && <Modal type={"loading"} title={"Processing"} subTitle={"Please wait while we delete this User."} /> }
+
             
             <div className="grid grid-cols-2 gap-5 my-5">
                 <div className="flex gap-5 justify-self-start">
@@ -83,7 +88,7 @@ export function Users() {
                 </div>
             </div>
 
-        </>
+        </div>
     )
 
 }

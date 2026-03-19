@@ -10,8 +10,15 @@ import { NewUser } from './pages/users/NewUser';
 import {UpdateUser} from './pages/users/UpdateUser';
 import { ViewReservation } from './pages/reservations/ViewReservation';
 import { NewReservation } from './pages/reservations/NewReservation';
+import { CreateLab } from './pages/computer_labs/CreateLab';
 import { ChooseLab } from './pages/computer_labs/ChooseLab';
 import { ViewLab } from './pages/computer_labs/ViewLab';
+import { UpdateLab } from './pages/computer_labs/UpdateLab';
+import { LabClass } from './pages/lab_class/LabClass';
+import { CreateClass } from './pages/lab_class/CreateClass';
+import { UpdateClass } from './pages/lab_class/UpdateClass';
+import { ViewClass } from './pages/lab_class/ViewClass';
+import { UpdateReservation } from './pages/reservations/UpdateReservation';
 
 function App() {
 
@@ -32,8 +39,15 @@ function App() {
               <Route path="/update_user/:id" element={<UpdateUser />}/>
               <Route path="reservation/:reservation_id" element={<ViewReservation />}/>
               <Route path="/new_reservation/:lab_id" element={<NewReservation />} />
+              <Route path="/update_reservation/:reservation_id" element={<UpdateReservation />} />
               <Route path="/choose_lab" element={<ChooseLab />} />
               <Route path="/view_lab/:lab_id" element={<ViewLab />}/>
+              <Route path="/update_lab/:lab_id" element={<UpdateLab />}/>
+              <Route path="/view_class/:class_id" element={<ViewClass />} />
+              <Route path="/lab_class" element={<LabClass />} />
+              <Route path="/update_class/:class_id" element={<UpdateClass />} />
+              <Route path="/create_class/:lab_id" element={<CreateClass />} />
+              <Route path="/create_lab" element={<CreateLab />} />
             </Routes>
           </main>
         </div>

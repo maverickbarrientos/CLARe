@@ -31,3 +31,10 @@ export function formatDateTime(dateTime) {
         minute: "2-digit",
     });
 }
+
+export function formatSchedule (startDate, endDate) {
+    const options = { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true };
+    const start = new Date(startDate).toLocaleString("en-US", options);
+    const end = new Date(endDate).toLocaleString("en-US", options);
+    return `${start} – ${end}`;
+}

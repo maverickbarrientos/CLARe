@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useCreateUser } from "../../hooks/users/useCreateUser";
 import { UserForm } from "./UserForm";
+import { Modal } from "../shared/Modal";
 
 export function CreateUser () {
 
@@ -34,6 +35,11 @@ export function CreateUser () {
         await create(form)
     }
 
-    return <UserForm form={form} handleChange={handleChange} onSubmit={handleSubmit} loading={loading} submitLabel="Create" />
+    return (
+        <div>
+            { loading && <Modal type={"loading"} title={"Processing"} subTitle={"Please wait while we process your reservation."} /> }
+            <UserForm form={form} handleChange={handleChange} onSubmit={handleSubmit} loading={loading} submitLabel="Create" />
+        </div>
+    )
 
 }

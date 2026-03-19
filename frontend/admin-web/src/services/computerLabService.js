@@ -13,3 +13,17 @@ export const getComputerLab = async (lab_id) => {
     return response.data.computer_lab
 
 }
+
+export const createLab = async (payload) => {
+
+    const response = await api.post("/create_lab", payload)
+    return response.data
+
+}
+
+export const updateLab = async (payload, lab_id) => {
+
+    const response = await api.patch(`/update_lab/${lab_id}`, payload);
+    return response.data
+
+}
