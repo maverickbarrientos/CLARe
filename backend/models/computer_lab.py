@@ -8,6 +8,7 @@ class ComputerLab(Base):
     id: int = Column(Integer, primary_key=True, autoincrement=True)
     lab_name: str = Column(String(255))
     location: str = Column(String(255))
-    capacity: str = Column(String(255))
+    capacity: str = Column(Integer)
     
     reservations = relationship("Reservation", back_populates="computer_labs")
+    lab_class = relationship("LabClass", back_populates="computer_labs")

@@ -6,6 +6,7 @@ from datetime import timedelta, datetime, timezone
 import qrcode, json, uuid, shutil, tempfile, os, io
 
 from .base import BaseService
+from database.base import Users
 from models.qr_code import QRCode
 from models.reservation import Reservation
 
@@ -172,13 +173,27 @@ class QRCodeService(BaseService):
         start_scan = reservation.start_date - timedelta(minutes=30)
         end_scan = reservation.start_date + timedelta(minutes=30)
         
-        if now < start_scan:
-            raise HTTPException(status_code=400, detail="Cannot scan yet")
+        # if now < start_scan:
+        #     raise HTTPException(status_code=400, detail="Cannot scan yet")
         
-        if now > end_scan:
-            raise HTTPException(status_code=400, detail="Scan no longer valid")
+        # if now > end_scan:
+        #     raise HTTPException(status_code=400, detail="Scan no longer valid")
 
-        updated_reservation = await self.__update_reservation(reservation)        
-        updated_qr_with_reservation = await self.invalidate_qr_code(qr_code)
+        updated_reservation = await self.__update_reservation(reservation)  
+        updated_qr_with_reservation = await self.invalidate_qr_code(qr_code.qr_value)
         
-        return updated_qr_with_reservation
+        
+        stmt = (select(Reservation).where(Reservation.id == updated_reservation.id)
+                .join(Reservation.user)
+                .join(Users.users_information)
+                .join(Reservation.computer_labs)
+                .outerjoin(Reservation.cancellation_requests)
+                .options(joinedload(Reservation.user).joinedload(Users.users_information),
+                         joinedload(Reservation.computer_labs),
+                         joinedload(Reservation.cancellation_requests))
+                )
+        
+        result = await self.session.execute(stmt)
+        reservation = result.unique().scalar_one_or_none()
+                
+        return reservation

@@ -2,18 +2,19 @@ from fastapi import HTTPException
 from sqlalchemy import select, and_, or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from datetime import datetime, timezone
+from datetime import datetime, timedelta
 
-from .base import BaseService
 from models.reservation import Reservation
 from models.users_information import UsersInformation
+from models.lab_class import LabClass
 from database.base import Users
 
-from schemas.reservation_schemas import ReservationStatus, ReservationCreate, AdminReservationCreate, ReservationUpdate, ReservationResponse, ReservationCreateResponse
+from schemas.reservation_schemas import ReservationStatus, UserReservationCreate, AdminReservationCreate, ReservationUpdate, ReservationResponse, ReservationCreateResponse
 
 from .qr_code_service import QRCodeService
+from .mailer_service import MailerService
 
-class ReservationService(QRCodeService):
+class ReservationService(QRCodeService, MailerService):
     
     # async def __get_reservations(self):
     #     stmt = (select(Reservation)
@@ -46,7 +47,7 @@ class ReservationService(QRCodeService):
     
     async def __check_conflict(self,lab_id, start_date, end_date):
                 
-        if start_date < datetime.now():
+        if start_date.replace(tzinfo=None) < datetime.now():
             return { "success" : False, "message" : "Reservation must be made at least 2 days in advance" }
         
         stmt = select(Reservation).where(
@@ -102,8 +103,8 @@ class ReservationService(QRCodeService):
         return existing_reservation
             
     
-    async def user_create_reservation(self, payload: ReservationCreate, user: Users):
-        existing_reservation = await self.__check_existing_reservation(payload.user_id)
+    async def user_create_reservation(self, payload: UserReservationCreate, user: Users):
+        existing_reservation = await self.__check_existing_reservation(user.id)
         
         if existing_reservation:    
             raise HTTPException(status_code=409, detail="You still have an existing reservation")
@@ -113,9 +114,14 @@ class ReservationService(QRCodeService):
         if conflicts:
             raise HTTPException(status_code=409, detail="Date conflicts")
 
-        reservation = Reservation(**payload.model_dump(), email=user.email)
-        self.session.add(reservation)
+        await self.session.refresh(user, ["users_information"])
         
+        full_name = f"{user.users_information.first_name} {user.users_information.last_name}"
+        department = f"{user.users_information.department}"
+                
+        reservation = Reservation(**payload.model_dump(), user_id=user.id,email=user.email, full_name=full_name, department=department)
+        self.session.add(reservation)
+                
         try:
             await self.session.commit()
             
@@ -131,7 +137,9 @@ class ReservationService(QRCodeService):
         
         await self.session.refresh(reservation)
         
-        return reservation
+        reservation_response = await self.get_reservation_by_id(reservation.id)
+        
+        return reservation_response
     
     async def create_reservation(self, payload: AdminReservationCreate):  
         conflicts = await self.__check_conflict(payload.lab_id, payload.start_date, payload.end_date)
@@ -153,14 +161,41 @@ class ReservationService(QRCodeService):
         
         await self.session.refresh(reservation)
         
+        reservation_response = await self.get_reservation_by_id(reservation.id)
+        
         print("Generate QR Code")
         
-        if reservation.status == ReservationStatus.reserved:
-            qr_payload = await self.generate_qr_data(reservation)
-            qr_code = await self.create_qr_code(qr_payload)
+        # if reservation.status == ReservationStatus.reserved:
+        #     qr_payload = await self.generate_qr_data(reservation)
+        #     qr_code = await self.create_qr_code(qr_payload)
         
         return reservation
     
+    async def get_weekly_events(self, start_of_week, end_of_week):
+        
+        reservations_stmt = (select(Reservation)
+                             .where(and_(
+                                 Reservation.start_date < start_of_week + timedelta(days=6),
+                                 Reservation.end_date > start_of_week,
+                                 Reservation.status.in_([
+                                     ReservationStatus.reserved,
+                                     ReservationStatus.in_use
+                                 ])
+                             )))
+        
+        classes_stmt = select(LabClass)
+                
+        try:
+            reservations_result = await self.session.execute(reservations_stmt)
+            classes_result = await self.session.execute(classes_stmt)
+            reservations = reservations_result.scalars().all()
+            classes = classes_result.scalars().all()
+                        
+        except SQLAlchemyError as e:
+            print(f"Database error in get_weekly_events (fetch) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to fetch reservations and classes")
+        
+        return { "reservations": reservations, "classes": classes }
     
     async def get_all_reservations(self, search: str) -> list[ReservationResponse]:
     
@@ -169,10 +204,12 @@ class ReservationService(QRCodeService):
                 .join(Users.users_information)
                 .join(Reservation.computer_labs)
                 .outerjoin(Reservation.qr_codes)
+                .outerjoin(Reservation.cancellation_requests)
                 .options(
                     joinedload(Reservation.user).joinedload(Users.users_information),
                     joinedload(Reservation.computer_labs),
-                    joinedload(Reservation.qr_codes)
+                    joinedload(Reservation.qr_codes),
+                    joinedload(Reservation.cancellation_requests)
                 ))
         
         if search:
@@ -191,6 +228,33 @@ class ReservationService(QRCodeService):
         
         return reservations
     
+    async def get_upcoming_reservation(self, user_id: int):
+        
+        stmt = (select(Reservation)
+                .where(Reservation.user_id == user_id)
+                .where(Reservation.start_date >= datetime.now())
+                .where(Reservation.status.in_([
+                    ReservationStatus.pending,
+                    ReservationStatus.reserved
+                ]))
+                .join(Reservation.computer_labs)
+                .join(Reservation.user)
+                .join(Users.users_information)
+                .options(
+                    joinedload(Reservation.user).joinedload(Users.users_information),
+                    joinedload(Reservation.computer_labs)
+                )
+            )
+        try:
+            result = await self.session.execute(stmt)
+            upcoming_reservation = result.scalar_one_or_none()
+            
+        except SQLAlchemyError as e:
+            print(f"Database error in get_upcoming_reservation (fetch) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to fetch upcoming reservatiion")
+        
+        return upcoming_reservation    
+        
     
     async def get_reservation_by_id(self, reservation_id) -> ReservationResponse:
         
@@ -199,9 +263,11 @@ class ReservationService(QRCodeService):
                 .join(Users.users_information)
                 .join(Reservation.computer_labs)
                 .outerjoin(Reservation.qr_codes)
+                .outerjoin(Reservation.cancellation_requests)
                 .options(joinedload(Reservation.user).joinedload(Users.users_information),
                          joinedload(Reservation.computer_labs),
-                         joinedload(Reservation.qr_codes))
+                         joinedload(Reservation.qr_codes),
+                         joinedload(Reservation.cancellation_requests))
                 )
         
         try:
@@ -223,9 +289,10 @@ class ReservationService(QRCodeService):
                 .join(Reservation.user)
                 .join(Users.users_information)
                 .join(Reservation.computer_labs)
+                .outerjoin(Reservation.qr_codes)
                 .options(
                     joinedload(Reservation.user).joinedload(Users.users_information),
-                    joinedload(Reservation.computer_labs)
+                    joinedload(Reservation.computer_labs), joinedload(Reservation.qr_codes)
                 ))
         
         try: 
@@ -238,6 +305,25 @@ class ReservationService(QRCodeService):
         
         return user_reservations
     
+    async def get_reservation_by_user(self, user_id):
+        stmt = (select(Reservation).where(Reservation.user_id == user_id)
+                .join(Reservation.user)
+                .join(Users.users_information)
+                .join(Reservation.computer_labs)
+                .options(
+                    joinedload(Reservation.user).joinedload(Users.users_information),
+                    joinedload(Reservation.computer_labs)
+                ))
+        
+        try: 
+            result = await self.session.execute(stmt)
+            user_reservations = result.scalar_one_or_none()
+            
+        except SQLAlchemyError as e:
+            print(f"Database error in get_user_reservation (fetch) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to fetch reservations")
+        
+        return user_reservations
     
     async def search_reservation(self, search: str) -> list[ReservationResponse]:
         
@@ -270,12 +356,13 @@ class ReservationService(QRCodeService):
         if not reservation: 
             raise HTTPException(status_code=404, detail="Reservation not found")
         
-        reservation_conflicts = await self.__check_conflict(payload.lab_id, payload.start_date, payload.end_date)
+        reservation_conflicts = await self.__has_date_conflict(reservation_id, payload.lab_id, payload.start_date, payload.end_date)
         
-        if reservation_conflicts:
-            raise HTTPException(status_code=409, detail="Conflict between dates!")
+        # if reservation_conflicts:
+        #     raise HTTPException(status_code=409, detail="Conflict between dates!")
         
         for key, value in payload.model_dump(exclude_unset=True).items():
+            print(reservation, key, value)
             setattr(reservation, key, value)
         
         try:
@@ -287,7 +374,9 @@ class ReservationService(QRCodeService):
         
         await self.session.refresh(reservation)
         
-        return reservation
+        reservation_response = await self.get_reservation_by_id(reservation.id)
+        
+        return reservation_response
     
     async def user_update_reservation(self, user_id: int,payload: ReservationUpdate, reservation_id): 
         
@@ -390,13 +479,6 @@ class ReservationService(QRCodeService):
         if not reservation:
             raise HTTPException(status_code=404, detail="Reservation not found")
         
-        match status:
-            case ReservationStatus.reserved:
-                print("send an email")
-            case ReservationStatus.rejected:
-                print("send email of rejection")
-            
-        
         setattr(reservation, "status", status)
         
         try:
@@ -412,4 +494,27 @@ class ReservationService(QRCodeService):
         
         await self.session.refresh(reservation)
         
-        return reservation
+        reservation_response = await self.get_reservation_by_id(reservation.id)
+        
+        match reservation.status:
+            case ReservationStatus.reserved:
+                qr_payload = await self.generate_qr_data(reservation)
+                qr_code = await self.create_qr_code(qr_payload)
+                await self.send_email({ "to" : [reservation.email], 
+                                 "subject": "reservation confirmed", 
+                                 "template": "templates/reservation-confirmed.html",
+                                  "context" : {
+                                      "full_name" : reservation.full_name,
+                                      "lab_name" : reservation_response.computer_labs.lab_name,
+                                      "location" : reservation_response.computer_labs.location,
+                                      "start_date" : reservation.start_date,
+                                      "end_date" : reservation.end_date,
+                                      "department" : reservation.department,
+                                      "reservation_description" : reservation.reservation_description,
+                                      "qr_url": qr_code.image_url
+                                  } })
+        
+            case ReservationStatus.rejected:
+                print("send email of rejection")
+                        
+        return reservation_response

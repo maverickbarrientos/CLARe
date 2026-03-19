@@ -28,10 +28,10 @@ class CancellationRequestService(ReservationService):
         
         return cancellation_request
     
-    async def create_request(self, user_id: int, reservation_id: int, payload: CancellationRequestCreate):
+    async def create_request(self, user_id: int, payload: CancellationRequestCreate):
         
-        reservation = await self._fetch_reservation_by_id(reservation_id)
-        existing_cancellation = await self.get_cancellation_by_reservation(reservation_id)
+        reservation = await self._fetch_reservation_by_id(payload.reservation_id)
+        existing_cancellation = await self.get_cancellation_by_reservation(payload.reservation_id)
         
         if not reservation:
             raise HTTPException(status_code=404, detail="Reservation not found")
@@ -42,7 +42,7 @@ class CancellationRequestService(ReservationService):
         if reservation.status != ReservationStatus.reserved:
             raise HTTPException(status_code=409, detail="Cancellation request is only allowed for reserved reservations")
         
-        cancellation_request = CancellationRequest(**payload.model_dump(), user_id=user_id, reservation_id=reservation_id)
+        cancellation_request = CancellationRequest(**payload.model_dump(), user_id=user_id)
         
         self.session.add(cancellation_request)
         
@@ -58,7 +58,7 @@ class CancellationRequestService(ReservationService):
             raise HTTPException(status_code=500, detail="Failed to create cancellation request")
         
         await self.session.refresh(cancellation_request)
-        updated_reservation = await self.update_reservation_status(reservation_id, ReservationStatus.pending_cancellation)
+        updated_reservation = await self.update_reservation_status(payload.reservation_id, ReservationStatus.cancellation_requested)
         
         return cancellation_request, updated_reservation
     

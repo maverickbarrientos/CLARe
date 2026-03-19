@@ -3,6 +3,7 @@ from typing import Optional
 import enum
 
 from schemas.user_schemas import UserResponse
+from schemas.cancellation_request_schema import CancellationResponse
 
 from datetime import datetime
 
@@ -26,7 +27,7 @@ class ComputerLabResponse(BaseModel):
     id: int
     lab_name: str
     location: str
-    capacity: str
+    capacity: int
 
 class ReservationStatus(str, enum.Enum):
     pending = "pending"
@@ -41,11 +42,18 @@ class ReservationCreate(BaseModel):
     user_id: int
     lab_id: int
     full_name: str
+    department: str
     reservation_description: str
     start_date: datetime
     end_date: datetime
     status: ReservationStatus
     
+class UserReservationCreate(BaseModel):
+    lab_id: int
+    reservation_description: str
+    start_date: datetime
+    end_date: datetime
+
 class AdminReservationCreate(ReservationCreate):
     email: str
     
@@ -54,6 +62,7 @@ class ReservationResponse(BaseModel):
     user_id: int
     lab_id: int
     full_name: str
+    department: str
     email: str
     reservation_description: str
     start_date: datetime
@@ -62,6 +71,7 @@ class ReservationResponse(BaseModel):
     user: UserResponse
     computer_labs: ComputerLabResponse
     qr_codes: Optional[QRCodeResponse] = None
+    cancellation_requests: Optional[CancellationResponse] = None
 
 class ReservationCreateResponse(ReservationCreate):
     id: int
@@ -69,5 +79,7 @@ class ReservationCreateResponse(ReservationCreate):
 class ReservationUpdate(BaseModel):
     lab_id: Optional[int] = None
     full_name: Optional[str] = None
+    email: Optional[str] = None
+    reservation_description: Optional[str] = None
     start_date: Optional[datetime] = None 
     end_date: Optional[datetime] = None

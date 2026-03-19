@@ -29,7 +29,7 @@ class UserManager(IntegerIDMixin, BaseUserManager[Users, int]):
         
     async def on_before_delete(self, user: Users, request: Optional[Request]):
         print(f"Deleting user {user.id}")
-        
+                
         if user.is_superuser:
             raise ValueError("Super user cannot be deleted")
         

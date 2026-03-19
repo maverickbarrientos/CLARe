@@ -1,4 +1,5 @@
-from pydantic import BaseModel
+from fastapi import Form
+from pydantic import BaseModel, EmailStr
 from fastapi_users import schemas
 from typing import Optional
 
@@ -34,4 +35,8 @@ class UserCreateResponse(BaseModel):
 
 class UserUpdate(schemas.BaseUserUpdate):
     pass
+
+class UserRegistration(BaseModel):
+    user: UserCreate
+    user_information: UserInformationCreate
 #also inherit from userInformation response to avoid confusion

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CLARe — Reservation Confirmed</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&family=Inter:wght@400;500&display=swap" rel="stylesheet"/>
+</head>
+<body style="margin: 0; padding: 40px 16px; background-color: #f0ede8; font-family: 'Inter', sans-serif;">
+
+  <div style="max-width: 580px; margin: 0 auto;">
+
+    <!-- Email Card -->
+    <div style="background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 0.5px solid #e0dbd3;">
+
+      <!-- Header -->
+      <div style="background-color: #111110; padding: 36px 40px 32px;">
+        <p style="margin: 0 0 12px; font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 0.22em; color: #7a7060; text-transform: uppercase;">
+          CLARe &#8212; Computer Lab Reservation System
+        </p>
+        <h1 style="margin: 0; font-family: 'Montserrat', sans-serif; font-size: 30px; font-weight: 600; color: #f0ece4; line-height: 1.1;">
+          Your reservation<br>is <span style="color: #f97316;">confirmed.</span>
+        </h1>
+        <div style="display: inline-flex; align-items: center; gap: 7px; margin-top: 18px; border: 0.5px solid rgba(249,115,22,0.4); padding: 5px 14px; border-radius: 100px;">
+          <div style="width: 6px; height: 6px; border-radius: 50%; background-color: #f97316; flex-shrink: 0;"></div>
+          <span style="font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 0.16em; color: #f97316; text-transform: uppercase;">Status: Reserved</span>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 36px 40px 28px;">
+
+        <p style="margin: 0 0 8px; font-size: 15px; font-weight: 500; color: #1a1a18;">Dear {{full_name}},</p>
+        <p style="margin: 0 0 28px; font-size: 13.5px; color: #6b6560; line-height: 1.75;">
+          Your computer lab reservation has been officially confirmed. Please review the details below and present your QR code upon arrival at the facility.
+        </p>
+
+        <!-- Divider -->
+        <hr style="border: none; border-top: 0.5px solid #e8e4de; margin: 0 0 24px;"/>
+
+        <!-- Reservation Details Label -->
+        <p style="margin: 0 0 16px; font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #a09890;">
+          Reservation details
+        </p>
+
+        <!-- Details Grid -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 28px;">
+          <tr>
+            <td style="width: 50%; padding-bottom: 16px; vertical-align: top;">
+              <p style="margin: 0 0 3px; font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: #a09890;">Lab</p>
+              <p style="margin: 0; font-size: 14px; font-weight: 500; color: #1a1a18;">{{lab_name}}</p>
+            </td>
+            <td style="width: 50%; padding-bottom: 16px; vertical-align: top;">
+              <p style="margin: 0 0 3px; font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: #a09890;">Location</p>
+              <p style="margin: 0; font-size: 14px; font-weight: 500; color: #1a1a18;">{{location}}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="width: 50%; padding-bottom: 16px; vertical-align: top;">
+              <p style="margin: 0 0 3px; font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: #a09890;">Start Date</p>
+              <p style="margin: 0; font-size: 14px; font-weight: 500; color: #1a1a18;">{{start_date_formatted}} &#183; {{ start_date_time }}</p>
+            </td>
+            <td style="width: 50%; padding-bottom: 16px; vertical-align: top;">
+              <p style="margin: 0 0 3px; font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: #a09890;">End Date</p>
+              <p style="margin: 0; font-size: 14px; font-weight: 500; color: #1a1a18;">{{ end_date_formatted }} &#183; {{ end_date_time }}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="width: 50%; vertical-align: top;">
+              <p style="margin: 0 0 3px; font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: #a09890;">Department</p>
+              <p style="margin: 0; font-size: 14px; font-weight: 500; color: #1a1a18;">{{department}}</p>
+            </td>
+            <td style="width: 50%; vertical-align: top;">
+              <p style="margin: 0 0 3px; font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: #a09890;">Purpose</p>
+              <p style="margin: 0; font-size: 14px; font-weight: 500; color: #1a1a18;">{{reservation_description}}</p>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Divider -->
+        <hr style="border: none; border-top: 0.5px solid #e8e4de; margin: 0 0 24px;"/>
+
+        <!-- QR Code Label -->
+        <p style="margin: 0 0 16px; font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: #a09890;">
+          Entry QR code
+        </p>
+
+        <!-- QR Row -->
+        <div style="display: flex; align-items: center; gap: 24px; background-color: #f7f5f2; border-radius: 10px; padding: 24px; margin-bottom: 28px; border: 0.5px solid #e8e4de;">
+
+          <!-- QR Left: image + button -->
+        <table style="border-collapse: collapse;">
+          <tr>
+            <td style="padding-bottom: 12px; text-align: center;">
+              <img
+                src="{{qr_url}}"
+                alt="Reservation QR Code"
+                width="120"
+                height="120"
+                style="border-radius: 8px; display: block; border: 0.5px solid #e8e4de;"
+              />
+            </td>
+          </tr>
+          <tr>
+            <td style="text-align: center;">
+              <a
+                href="{{qr_url}}"
+                download="CLARe-QR.png"
+                style="display: inline-block; background-color: #f97316; border-radius: 8px; padding: 8px 14px; font-family: 'Montserrat', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #ffffff; text-decoration: none;"
+              >
+                &#8675; Download QR
+              </a>
+            </td>
+          </tr>
+        </table>
+
+          <!-- QR Right: uid + description -->
+          <div style="flex: 1;">
+            <p style="margin: 0; font-size: 12px; color: #6b6560; line-height: 1.65;">
+              Scan this QR code or present it to the lab administrator upon arrival. Keep this email for your records.
+            </p>
+          </div>
+
+        </div>
+
+        <!-- Notice -->
+        <p style="margin: 0; font-size: 13px; color: #6b6560; line-height: 1.75; border-left: 2px solid #f97316; padding-left: 14px;">
+          To cancel or reschedule, notify the laboratory administrator at least 24 hours in advance. Failure to do so may affect future reservation privileges.
+        </p>
+
+      </div>
+
+      <!-- Footer -->
+      <div style="border-top: 0.5px solid #e8e4de; padding: 20px 40px 28px; display: flex; justify-content: space-between; align-items: center;">
+        <p style="margin: 0; font-size: 12px; color: #a09890; line-height: 1.6; max-width: 340px;">
+          This is an automated message from CLARe. For inquiries, contact your laboratory administrator.
+        </p>
+        <p style="margin: 0; font-family: 'Montserrat', sans-serif; font-size: 16px; font-weight: 600; color: #a09890; letter-spacing: 0.04em; flex-shrink: 0; margin-left: 16px;">
+          CLA<span style="color: #f97316;">Re</span>
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

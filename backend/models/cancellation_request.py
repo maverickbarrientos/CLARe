@@ -13,7 +13,7 @@ class CancellationRequest(Base):
     user_id: int = Column(Integer, ForeignKey("user.id", ondelete="CASCADE", onupdate="CASCADE"))
     reservation_id: int = Column(Integer, ForeignKey("reservations.id", ondelete="CASCADE", onupdate="CASCADE"))
     cancellation_reason: str = Column(Text, nullable=False)
-    created_at: datetime = Column(DateTime)
+    created_at: datetime = Column(DateTime, default=datetime.now())
     status: CancellationStatus = Column(Enum(CancellationStatus), default=CancellationStatus.pending)
     admin_note: str = Column(Text, nullable=True)
     handled_at: datetime = Column(DateTime, nullable=True)

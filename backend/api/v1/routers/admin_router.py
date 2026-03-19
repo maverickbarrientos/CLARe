@@ -1,6 +1,10 @@
 from fastapi import APIRouter, Depends
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
+from datetime import date, timedelta
+
+from api.v1.sockets import sio
 
 from config.security import UserManager, get_user_manager
 from services.computer_lab_service import ComputerLabService
@@ -8,12 +12,14 @@ from services.user_service import UserService
 from services.reservation_service import ReservationService
 from services.qr_code_service import QRCodeService
 from services.cancellation_request_service import CancellationRequestService
+from services.lab_class_service import LabClassService
 from database.session import get_session
 
 from schemas.computer_lab_schema import ComputerLabCreate, ComputerLabResponse, ComputerLabUpdate
 from schemas.user_schemas import UserCreate, UserInformationCreate, UserInformationUpdate, UserResponse, UserCreateResponse, UserUpdate
 from schemas.reservation_schemas import ReservationCreate, AdminReservationCreate, ReservationUpdate, ReservationStatus, ReservationResponse, ReservationCreateResponse
 from schemas.qr_code_schemas import QRCodeWithReservation, QRCodeResponse, ApprovalResponse
+from schemas.lab_class_schemas import LabClassCreate, LabClassResponse, LabClassUpdate
 
 admin_router = APIRouter()
 
@@ -31,6 +37,9 @@ def qr_service_dependency(session: AsyncSession = Depends(get_session)) -> QRCod
 
 def cancellation_service_dependency(session: AsyncSession = Depends(get_session)) -> CancellationRequestService:
     return CancellationRequestService(session)
+
+def lab_class_service_dependency(session: AsyncSession = Depends(get_session)) -> LabClassService:
+    return LabClassService(session)
 
 @admin_router.get("/")
 async def index():
@@ -51,7 +60,7 @@ async def get_computer_labs(
     
     return { "computer_labs" : computer_labs }
 
-@admin_router.get("/computer_lab/{lab_id}", response_model=dict[str, ComputerLabResponse])
+@admin_router.get("/computer_lab/{lab_id}")
 async def get_lab_by_id(
     lab_id: int,
     computer_lab_service: ComputerLabService = Depends(computer_lab_service_dependency)
@@ -61,7 +70,7 @@ async def get_lab_by_id(
     
     return { "computer_lab" : computer_lab }
 
-@admin_router.post("/create_lab", response_model=dict[str, ComputerLabResponse])
+@admin_router.post("/create_lab")
 async def create_lab(
     computer_lab: ComputerLabCreate,
     computer_lab_service: ComputerLabService = Depends(computer_lab_service_dependency)
@@ -71,7 +80,7 @@ async def create_lab(
     
     return { "computer_lab" : new_lab }
 
-@admin_router.patch("/update_lab", response_model=dict[str, ComputerLabResponse])
+@admin_router.patch("/update_lab/{lab_id}")
 async def update_lab(
     lab_id: int,
     computer_lab: ComputerLabUpdate,
@@ -187,16 +196,6 @@ async def get_reservation_by_id(
     
     return { "reservation" : reservation }
 
-@admin_router.get("/search_reservation", response_model=dict[str, list[ReservationResponse]])
-async def search_reservation(
-    search_query: Optional[str] = None,
-    reservation_service: ReservationService = Depends(reservation_service_dependency)
-):
-    
-    reservations = await reservation_service.search_reservation(search_query)
-    
-    return { "reservations" : reservations }
-
 @admin_router.post("/custom_reservation", response_model=dict[str, ReservationCreateResponse])
 async def custom_reservation(
     reservation: AdminReservationCreate,
@@ -217,7 +216,7 @@ async def delete_reservation(
     
     return { "message" : result }
 
-@admin_router.patch("/update_reservation", response_model=dict[str, ReservationCreateResponse])
+@admin_router.patch("/update_reservation/{reservation_id}")
 async def update_reservation(
     reservation_id: int,
     payload: ReservationUpdate,
@@ -253,7 +252,7 @@ async def reject_reservation(
     
     return reservation
 
-@admin_router.patch("/reject_cancellation")
+@admin_router.patch("/reject_cancellation/{reservation_id}")
 async def reject_cancellation(
     reservation_id: int,
     admin_note: str,
@@ -264,7 +263,7 @@ async def reject_cancellation(
     
     return result
 
-@admin_router.patch("/approve_cancellation")
+@admin_router.patch("/approve_cancellation/{reservation_id}")
 async def approve_cancellation(
     reservation_id: int,
     cancellation_service: CancellationRequestService = Depends(cancellation_service_dependency)
@@ -274,13 +273,14 @@ async def approve_cancellation(
     
     return result
 
-@admin_router.patch('/verify_qr_code', response_model=QRCodeWithReservation)
+@admin_router.patch('/verify_qr_code')
 async def verify_qr_code(
     qr_value: str,
-    qr_code_service: QRCodeService = Depends(qr_service_dependency)
+    qr_code_service: QRCodeService = Depends(qr_service_dependency),
 ):
     
     qr_with_reservation = await qr_code_service.verify_qr(qr_value)
+    await sio.emit("reservation_status_update", jsonable_encoder(qr_with_reservation))
     
     return qr_with_reservation
 
@@ -293,3 +293,70 @@ async def invalidate_qr(
     result = await qr_code_service.invalidate_qr_code(qr_value)
     
     return result
+
+@admin_router.get("/class")
+async def get_class(
+    day: Optional[str] = None,
+    lab_class_service: LabClassService = Depends(lab_class_service_dependency)
+):
+    
+    lab_class = await lab_class_service.get_all_class(day)
+    
+    return lab_class
+
+@admin_router.get("/class/{class_id}")
+async def get_class_by_id(
+    class_id: int,
+    lab_class_service: LabClassService = Depends(lab_class_service_dependency)
+):
+    
+    lab_class = await lab_class_service.get_class_by_id(class_id)
+    
+    return lab_class
+
+@admin_router.post("/create_class")
+async def create_class(
+    payload: LabClassCreate,
+    lab_class_service: LabClassService = Depends(lab_class_service_dependency)
+):
+    
+    lab_class = await lab_class_service.create_class(payload)
+    
+    return lab_class
+
+@admin_router.patch("/update_class/{class_id}")
+async def update_class(
+    class_id: int,
+    payload: LabClassUpdate,
+    lab_class_service: LabClassService = Depends(lab_class_service_dependency)
+):
+    
+    updated_class = await lab_class_service.update_class(class_id, payload)
+    
+    return updated_class
+
+@admin_router.delete("/delete_class/{class_id}")
+async def delete_class(
+    class_id: int,
+    lab_class_service: LabClassService = Depends(lab_class_service_dependency)
+):
+    
+    result = await lab_class_service.delete_class(class_id)
+    
+    return result
+
+@admin_router.get("/weekly_events")
+async def get_weekly_events(
+    start_of_week: date = None,
+    reservation_service: ReservationService = Depends(reservation_service_dependency)
+):
+    
+    if not start_of_week:
+        today = date.today()
+        start_of_week = today - timedelta(days=today.weekday())
+        
+    end_of_week = start_of_week + timedelta(days=6)
+    
+    weekly_events = await reservation_service.get_weekly_events(start_of_week, end_of_week)
+    
+    return weekly_events

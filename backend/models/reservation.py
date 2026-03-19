@@ -12,6 +12,7 @@ class Reservation(Base):
     user_id: int = Column(ForeignKey("user.id", ondelete="CASCADE", onupdate="CASCADE"), unique=True)
     lab_id: int = Column(ForeignKey("computer_labs.id"))
     full_name: str = Column(String(255))
+    department: str = Column(String(255))
     email: str = Column(String(255))
     reservation_description: str = Column(String(255))
     start_date: datetime = Column(DateTime)
@@ -21,4 +22,4 @@ class Reservation(Base):
     user = relationship("Users", back_populates="reservations")
     computer_labs = relationship("ComputerLab", back_populates="reservations")
     qr_codes = relationship("QRCode", back_populates="reservations", uselist=False)
-    cancellation_requests = relationship("CancellationRequest", back_populates="reservations")
+    cancellation_requests = relationship("CancellationRequest", back_populates="reservations", uselist=False)

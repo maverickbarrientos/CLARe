@@ -1,6 +1,6 @@
 from fastapi import HTTPException
-from sqlalchemy import select
-from sqlalchemy.orm import joinedload
+from sqlalchemy import select, or_
+from sqlalchemy.orm import joinedload, contains_eager
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
 from models.computer_lab import ComputerLab
@@ -8,13 +8,15 @@ from models.reservation import Reservation
 
 from .base import BaseService
 from schemas.computer_lab_schema import ComputerLabCreate, ComputerLabResponse, ComputerLabUpdate
+from schemas.reservation_schemas import ReservationStatus
 
 class ComputerLabService(BaseService):
         
     async def get_all_labs(self) -> list[ComputerLabResponse]:
         
+        stmt = select(ComputerLab).options(joinedload(ComputerLab.reservations))
+        
         try:
-            stmt = select(ComputerLab).options(joinedload(ComputerLab.reservations))
             result = await self.session.execute(stmt)
             computer_labs = result.unique().scalars().all()
         
@@ -30,9 +32,18 @@ class ComputerLabService(BaseService):
     
     async def get_lab_by_id(self, lab_id: int) -> ComputerLabResponse:
         
+        stmt = (select(ComputerLab).outerjoin(ComputerLab.reservations)
+                .where(ComputerLab.id == lab_id)
+                .where(or_(Reservation.status.in_([
+                        ReservationStatus.reserved,
+                        ReservationStatus.in_use,
+                        ReservationStatus.pending
+                        ]),
+                        Reservation.id == None
+                    ))
+                ).options(contains_eager(ComputerLab.reservations))
+
         try:
-            stmt = (select(ComputerLab).where(ComputerLab.id == lab_id)
-                    .options(joinedload(ComputerLab.reservations)))
             result = await self.session.execute(stmt)
             computer_lab = result.unique().scalar_one_or_none()
         
@@ -45,21 +56,24 @@ class ComputerLabService(BaseService):
         
         return computer_lab
     
-    async def get_lab_reservations(self, lab_id):
+    async def get_active_labs(self):
         
-        stmt = (select(ComputerLab).where(ComputerLab.id == lab_id)
-                .options(joinedload(ComputerLab.reservations))
-                )
+        stmt = (select(ComputerLab).outerjoin(ComputerLab.reservations)
+                .where(Reservation.status.in_([
+                        ReservationStatus.reserved,
+                        ReservationStatus.in_use
+                    ]))
+                ).options(contains_eager(ComputerLab.reservations))
         
         try:
             result = await self.session.execute(stmt)
-            computer_lab_reservations = result.unique().scalars().all()
+            computer_labs = result.unique().scalars().all()
             
         except SQLAlchemyError as e:
-            print(f"Database error in get_lab_reservations (fetch) : {e}")
-            raise HTTPException(status_code=500, detail="Failed to fetch computer lab's reservations")
+            print(f"Database error in get_active_labs (fetch) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to fetch active labs")
         
-        return computer_lab_reservations
+        return computer_labs
     
     async def create_lab(self, computer_lab: ComputerLabCreate) -> ComputerLabResponse:
         

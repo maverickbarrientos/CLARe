@@ -25,16 +25,16 @@ class ReservationResponse(BaseModel):
 class ComputerLabCreate(BaseModel):
     lab_name: str
     location: str
-    capacity: str
+    capacity: int
     
 class ComputerLabResponse(BaseModel):
     id: int
     lab_name: str
     location: str
-    capacity: str
+    capacity: int
     reservations: Optional[list[ReservationResponse]] = None
     
 class ComputerLabUpdate(BaseModel):
     lab_name: Optional[str] = None
     location: Optional[str] = None
-    capacity: Optional[str] = None
+    capacity: Optional[int] = None
