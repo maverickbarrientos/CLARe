@@ -8,6 +8,8 @@ import { Modal } from "../shared/Modal";
 export function CreateReservation () {
 
     const { create, loading: createLoading } = useCreateReservation();
+    const [successModalOpen, setSuccessModalOpen] = useState(false);
+    const [errorModalOpen, setErrorModalOpen] = useState(false);
     const { computerLab, loading: computerLabLoading } = useComputerLab();
 
     const [form, setForm] = useState({
@@ -33,13 +35,22 @@ export function CreateReservation () {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        create({ ...form, lab_id: computerLab.id })
-    }
+
+        create(
+            { ...form, lab_id: computerLab.id },
+            {
+                onSuccess: () => setSuccessModalOpen(true),
+                onError: () => setErrorModalOpen(true),
+            }
+        );
+    };
 
     return (
 
         <div>
             { createLoading && <Modal type={"loading"} title={"Creating Reservation"} subTitle={"Please wait while we process your reservation."} /> }
+            { successModalOpen && <Modal type={"success"} title={"Reservation Created"} subTitle={"The reservation has been successfully created."} onClose={() => setSuccessModalOpen(false)} /> }
+            { errorModalOpen && <Modal type={"error"} title={"Something went wrong"} subTitle={"Failed to create the reservation. Please try again."} onClose={() => setErrorModalOpen(false)} /> }
             <div className="text-left w-3/12 my-4">
                 <p className="text-xl font-bold font-heading my-2">Computer Lab</p>
                 <Card className="text-left p-2 pr-10" cardTitle={computerLab.lab_name}>
@@ -49,7 +60,7 @@ export function CreateReservation () {
 
             <div className="text-left my-4">
                 <p className="text-xl font-bold font-heading my-2">Reservation Information</p>
-                <ReservationForm handleChange={handleChange} onSubmit={handleSubmit} form={form} />
+                <ReservationForm handleChange={handleChange} onSubmit={handleSubmit} form={form} submitLabel={"CREATE"} />
             </div>
         </div>
 

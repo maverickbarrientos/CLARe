@@ -3,15 +3,19 @@ import { PageTitle } from "../../components/PageTitle"
 import { useUsers } from "../../hooks/users/useUsers"
 import { useDeleteUser } from "../../hooks/users/useDeleteUser";
 import { Modal } from "../../components/shared/Modal";
+import { useState } from "react";
 
 export function Users() {
 
     const { users, search, setSearch, fetchUsers,error: usersError, loading: usersLoading } = useUsers();
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null);
     const { remove, loading: removeLoading } = useDeleteUser();
 
-    const handleDelete = async (id) => {
-        await remove(id)
-        fetchUsers()
+    const handleDelete = async () => {
+        await remove(selectedUser);
+        setDeleteModalOpen(false);
+        fetchUsers();
     }
 
     if (usersError) return <p>{ usersError }</p>
@@ -26,6 +30,15 @@ export function Users() {
             { usersLoading && <Modal type={"loading"} title={"Loading Users"} subTitle={"Please wait while we fetch user data."} /> }
             { removeLoading && <Modal type={"loading"} title={"Processing"} subTitle={"Please wait while we delete this User."} /> }
 
+            {deleteModalOpen &&
+                <Modal
+                    type="confirm"
+                    title="Delete User"
+                    subTitle="This will permanently remove the user account."
+                    onClose={() => setDeleteModalOpen(false)}
+                    onConfirm={handleDelete}
+                />
+            }
             
             <div className="grid grid-cols-2 gap-5 my-5">
                 <div className="flex gap-5 justify-self-start">
@@ -53,7 +66,7 @@ export function Users() {
 
                     <tbody className="divide-y font-sans">
                         { users.map((user) => {
-
+                            
                             return (
                                 <tr key={user.id}>
                                     <td className="flex flex-col">
@@ -65,7 +78,9 @@ export function Users() {
                                     <td>{ user.is_superuser ? "Admin" : "User" }</td>
                                     <td>
                                         <NavLink to={ `/update_user/${user.id}` }><span className="material-symbols-outlined">edit</span></NavLink>
-                                        <button onClick={() => {handleDelete(user.id)}} ><span className="material-symbols-outlined">delete</span></button>
+                                        <button onClick={() => { setSelectedUser(user.id); setDeleteModalOpen(true); }}>
+                                            <span className="material-symbols-outlined">delete</span>
+                                        </button>
                                         <NavLink to={ `/user/${user.id}` }><span className="material-symbols-outlined">visibility</span></NavLink>
                                     </td>
                                 </tr>

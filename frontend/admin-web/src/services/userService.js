@@ -24,14 +24,14 @@ export const getUserReservations = async ( user_id ) => {
 export const createUser = async ( payload ) => {
 
     const response = await api.post("/create_user", payload)
-    return response.data
+    return response;
 
 }
 
 export const updateUser = async ( id, payload ) => {
 
     const response = await api.patch(`/update_user/${id}`, payload);
-    return response.data
+    return response;
 
 }
 

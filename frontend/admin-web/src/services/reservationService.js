@@ -14,10 +14,17 @@ export const getReservation = async ( reservation_id ) => {
 
 }
 
+export const deleteReservation = async ( reservation_id ) => {
+
+    const response = await api.delete(`/delete_reservation/${reservation_id}`)
+    return response;
+
+}
+
 export const approveReservation = async ( reservation_id ) => {
 
     const response = await api.patch(`/reservation/${reservation_id}/approve`);
-    return response.data
+    return response
 
 }
 
@@ -32,21 +39,21 @@ export const rejectReservation = async ( reservation_id ) => {
 export const invalidateQR = async ( qr_value ) => {
 
     const response = await api.patch(`/qr_code/${qr_value}/invalidate`)
-    return response.data
+    return response
 
 }
 
 export const createReservation = async ( payload ) => {
 
     const response = await api.post(`/custom_reservation/`, payload)
-    return response.data
+    return response
 
 }
 
 export const approveCancellation = async ( reservation_id ) => {
 
     const response = await api.patch(`/approve_cancellation/${reservation_id}`);
-    return response.data
+    return response
 
 }
 
@@ -60,7 +67,7 @@ export const rejectCancellation = async ( reservation_id ) => {
 export const updateReservation = async ( payload, reservation_id ) => {
 
     const response = await api.patch(`/update_reservation/${reservation_id}`, payload);
-    return response.data;
+    return response;
 
 }
 

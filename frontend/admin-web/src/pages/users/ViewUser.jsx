@@ -11,12 +11,12 @@ export function ViewUser() {
     const { user, error: userError, loading: userLoading } = useUser();
     const { reservations, error: reservationsError, loading: reservationsLoading } = useUserReservations();
 
+    if (userLoading || reservationsLoading) return <Modal type={"loading"} title={"Processing"} subTitle={"Please wait while we fetch user data."} /> 
     if (userError || reservationsError) return <p>Error...</p>
 
+
     return (
-        <div>
-            { (userLoading || reservationsLoading) && <Modal type={"loading"} title={"Processing"} subTitle={"Please wait while we fetch user data."} /> }
-            
+        <div>            
 
             <SubPageTitle to="/users" label="Back to Users" 
                           title={ ` ${user.users_information.first_name} ${user.users_information.last_name}` }

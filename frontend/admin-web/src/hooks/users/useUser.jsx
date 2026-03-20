@@ -13,7 +13,7 @@ export function useUser () {
         const fetchUser = async () => {
             try {
                 const response = await getUser(id);
-                console.log(response)
+                console.log(response);
                 setUser(response);
             } catch (error) {
                 console.log(error);

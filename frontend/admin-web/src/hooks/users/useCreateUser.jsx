@@ -3,10 +3,11 @@ import { createUser } from "../../services/userService";
 
 export function useCreateUser() {
 
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
     const create = async (payload) => {
+        setLoading(true);
         try {
             const response = await createUser(payload);
             return response;

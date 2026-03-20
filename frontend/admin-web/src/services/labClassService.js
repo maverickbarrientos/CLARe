@@ -12,7 +12,7 @@ export const createClass = async (payload) => {
 
 
     const response = await api.post(`/create_class`, payload)
-    return response.data
+    return response;
 
 }
 
@@ -26,6 +26,6 @@ export const getClass = async (class_id) => {
 export const updateClass = async (payload, class_id) => {
 
     const response = await api.patch(`/update_class/${class_id}`, payload)
-    return response.data;
+    return response;
 
 }

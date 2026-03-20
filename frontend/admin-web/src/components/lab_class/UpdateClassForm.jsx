@@ -7,6 +7,8 @@ export function UpdateClassForm ({ labClass, loading }) {
 
     const { computerLabs } = useComputerLabs();
     const { update, error, loading: updateLoading } = useUpdateClass();
+    const [successModalOpen, setSuccessModalOpen] = useState(false);
+    const [errorModalOpen, setErrorModalOpen] = useState(false);
     const [classForm, setClassForm] = useState({
         lab_id: labClass.lab_id,
         subject: labClass.subject,
@@ -28,7 +30,15 @@ export function UpdateClassForm ({ labClass, loading }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         console.log({...classForm, lab_id: classForm.lab_id });
-        await update({...classForm, lab_id: classForm.lab_id})
+        const result = await update({...classForm, lab_id: classForm.lab_id});
+
+        if (result.status === 200) {
+            setSuccessModalOpen(true)
+        } 
+
+        if (error) {
+            setErrorModalOpen(true);
+        }
     }
 
     return (
@@ -36,7 +46,9 @@ export function UpdateClassForm ({ labClass, loading }) {
         <div>
 
             { updateLoading && <Modal type={"loading"} title={"Updating Class"} subTitle={"Please wait while we update class details."} /> }
-            
+            { successModalOpen && <Modal type={"success"} title={"Success"} subTitle={"Class schedule has been updated successfully."} onClose={() => setSuccessModalOpen(false)} /> }
+            { errorModalOpen && <Modal type={"error"} title={"Something went wrong"} subTitle={"Class schedule has been updated successfully."} onClose={() => setErrorModalOpen(false)} /> }
+
             <ClassForm classForm={classForm} computerLab={labClass.computer_labs}
                 handleChange={handleChange} handleSubmit={handleSubmit}
                 loading={loading} submitLabel={"UPDATE"}

@@ -9,7 +9,7 @@ export function useStatusUpdate () {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
-    const updateStatus = async (status) => {
+    const updateStatus = async (status, reason="") => {
         if (!isConnected) return;
         setLoading(true);
         try {
@@ -19,13 +19,13 @@ export function useStatusUpdate () {
                     socketio.emit("approve_reservation", reservation_id)
                     break;
                 case "reject":
-                    socketio.emit("reject_reservation", reservation_id)
+                    socketio.emit("reject_reservation", reservation_id, reason)
                     break;
                 case "approve_cancellation":
                     socketio.emit("approve_cancellation", reservation_id)
                     break;
                 case "reject_cancellation":
-                    socketio.emit("reject_cancellation", reservation_id)
+                    socketio.emit("reject_cancellation", reservation_id, reason)
                     break;
                 }
         } catch (error) {

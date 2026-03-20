@@ -8,6 +8,8 @@ export function UpdateReservationForm ({ reservation }) {
 
     const { update } = useUpdateReservation();
     const { computerLabs, error, loading } = useComputerLabs();
+    const [successModalOpen, setSuccessModalOpen] = useState(false);
+    const [errorModalOpen, setErrorModalOpen] = useState(false);
     const [reservationForm, setReservationForm] = useState({
         user_id: reservation.user_id,
         lab_id: reservation.lab_id,
@@ -31,7 +33,15 @@ export function UpdateReservationForm ({ reservation }) {
     const handleSubmit =  async (e) => {
         e.preventDefault();
         console.log(reservationForm)
-        await update(reservationForm)
+        const result = await update(reservationForm);
+
+        if (result.status === 200) {
+            setSuccessModalOpen(true)
+        } 
+
+        if (error) {
+            setErrorModalOpen(true);
+        }
     }
 
     return (
@@ -39,6 +49,8 @@ export function UpdateReservationForm ({ reservation }) {
         <div>
 
             { loading && <Modal type={"loading"} title={"Updating Reservation"} subTitle={"Please wait while we update reservation details."} /> }
+            { successModalOpen && <Modal type={"success"} title={ "Success"} subTitle={"Reservation has been updated successfully."} onClose={() => setSuccessModalOpen(false)} /> }
+            { errorModalOpen && <Modal type={"error"} title={"Something went wrong"} subTitle={"Failed to update the reservation. Please try again."} onClose={() => setErrorModalOpen(false)} /> }
             <div className="text-left my-4">
                 <p className="text-xl font-bold font-heading my-2">Reservation Information</p>
                 <ReservationForm handleChange={handleChange} onSubmit={handleSubmit} 

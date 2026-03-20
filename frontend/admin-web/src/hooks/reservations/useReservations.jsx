@@ -36,10 +36,9 @@ export function useReservations() {
     useEffect(() => {
         if (!isConnected) return
 
-        socketio.on('reservations', (data) => {
-            console.log(data);
+        socketio.on('reservation_created', (data) => {
             setReservations(prev => 
-                [...prev, data]
+                [...prev, data.reservation]
             )
         })
 

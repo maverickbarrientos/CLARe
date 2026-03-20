@@ -6,6 +6,8 @@ import { Modal } from "../shared/Modal";
 export function UpdateUserForm ({ user }) {
 
     const { update, error, loading } = useUpdateUser();
+    const [successModalOpen, setSuccessModalOpen] = useState(false);
+    const [errorModalOpen, setErrorModalOpen] = useState(false);
     const [form, setForm] = useState({
         user : {
             email : user.email,
@@ -26,18 +28,28 @@ export function UpdateUserForm ({ user }) {
                 [e.target.name]: e.target.value
             }
         })
-        console.log(form);
     }
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         console.log(form);
-        update(user.id, form);
+        const result = await update(user.id, form);
+        console.log(`RESULT`, result);
+
+        if (result.status === 200) {
+            setSuccessModalOpen(true)
+        } 
+
+        if (error) {
+            setErrorModalOpen(true);
+        }
     }
 
     return (
         <div>
             { loading && <Modal type={"loading"} title={"Updating User"} subTitle={"Please wait while we update user information."} /> }
+            { successModalOpen && <Modal type={"success"} title={"Success"} subTitle={"User account has been updated successfully."} onClose={() => setSuccessModalOpen(false)} /> }
+            { errorModalOpen && <Modal type={"error"} title={"Something went wrong"} subTitle={"Failed to process user request. Please try again."} onClose={() => setErrorModalOpen(false)} /> }
             <UserForm form={form} handleChange={handleChange} onSubmit={handleSubmit} submitLabel="Update" />
         </div>
     )

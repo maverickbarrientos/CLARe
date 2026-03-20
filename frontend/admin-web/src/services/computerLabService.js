@@ -27,3 +27,15 @@ export const updateLab = async (payload, lab_id) => {
     return response.data
 
 }
+
+export const deleteLab = async (lab_id) => {
+
+    const response = await api.delete(`/delete_lab/${lab_id}`);
+    return response
+
+}
+
+export const getComputerLabAnalytics = async () => {
+    const response = await api.get("/computer_labs/analytics");
+    return response.data;
+};

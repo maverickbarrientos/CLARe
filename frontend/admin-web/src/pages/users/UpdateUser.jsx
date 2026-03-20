@@ -8,6 +8,8 @@ export function UpdateUser() {
 
     const { user, loading } = useUser();
 
+    if (loading) return <Modal type={"loading"} title={"Processing"} subTitle={"Please wait while we fetch user data."} />
+
     return (
         
         <div>
@@ -15,7 +17,6 @@ export function UpdateUser() {
                          title="Edit User"
                          subTitle="Update user account information and access details."/>
 
-            { loading && <Modal type={"loading"} title={"Processing"} subTitle={"Please wait while we fetch user data."} /> }
     
             <UpdateUserForm user={user} />
 
