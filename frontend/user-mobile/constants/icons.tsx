@@ -4,4 +4,5 @@ export const Icons = {
     home: MaterialIcons,
     reservation: MaterialIcons,
     computer_labs: MaterialIcons,
+    class: MaterialIcons
 }

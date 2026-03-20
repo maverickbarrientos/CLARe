@@ -10,7 +10,12 @@ module.exports = {
         glow: "#FF8C42",
         gray: "#4B4B4B",
         success: "#1EE84C",
-        warning: "#FFC107"
+        warning: "#FFC107",
+        danger: "#DC3545",
+        info: "#07BDFF",
+        teal: "#2DD4BF",
+        muted: "#6B7280",
+        dark_gray: "#111111"
       },
       fontFamily: {
         heading: ["Montserrat-Bold"],

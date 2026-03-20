@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import './global.css';
 import { useFonts } from "expo-font";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 export default function RootLayout() {
 
@@ -14,25 +15,82 @@ export default function RootLayout() {
     return null; // or a loading screen
   }
 
-  return <Stack>
-    <Stack.Screen 
-      name="index"
-      options={{ 
-        headerShown: false,
-        contentStyle: {
-          backgroundColor: "black"
-        }
-      }}
-    />
+  return (
 
-    <Stack.Screen 
-      name="(tabs)"
-      options={{ 
-        headerShown: false,
-        contentStyle: {
-          backgroundColor: "black"
-        }
-      }}
-    />
-  </Stack>;
+    <AuthProvider>
+      <Stack>
+        <Stack.Screen 
+          name="index"
+          options={{ 
+            headerShown: false,
+            contentStyle: {
+              backgroundColor: "black"
+            }
+          }}
+        />
+
+        <Stack.Screen 
+          name="signup"
+          options={{ 
+            headerShown: false,
+            contentStyle: {
+              backgroundColor: "black"
+            }
+          }}
+        />
+
+        <Stack.Screen 
+          name="(tabs)"
+          options={{ 
+            headerShown: false,
+            contentStyle: {
+              backgroundColor: "white"
+            }
+          }}
+        />
+
+        <Stack.Screen 
+          name="computer_labs"
+          options={{ 
+            headerShown: false,
+            contentStyle: {
+              backgroundColor: "black"
+            }
+          }}
+        />
+
+        <Stack.Screen 
+          name="reservations"
+          options={{ 
+            headerShown: false,
+            contentStyle: {
+              backgroundColor: "black"
+            }
+          }}
+        />
+
+        <Stack.Screen 
+          name="lab_class"
+          options={{ 
+            headerShown: false,
+            contentStyle: {
+              backgroundColor: "black"
+            }
+          }}
+        />
+
+        <Stack.Screen 
+          name="user"
+          options={{ 
+            headerShown: false,
+            contentStyle: {
+              backgroundColor: "black"
+            }
+          }}
+        />
+
+      </Stack>
+    </AuthProvider>
+
+  );
 }

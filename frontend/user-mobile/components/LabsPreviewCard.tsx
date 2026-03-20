@@ -6,20 +6,30 @@ interface PreviewCardProps {
     capacity: string
     location: string
     status: string
+    labID: number
 }
 
 
 const statusConfig: Record<string, {color: string, label: string}> = {
     reserved: {
-        color: "success",
+        color: "text-success",
         label: "RESERVED"
     }, pending : {
-        color: "warning",
+        color: "text-warning",
         label: "PENDING"
+    }, rejected : {
+        color: "text-danger",
+        label: "REJECTED"
+    }, in_use : {
+        color: "text-info",
+        label: "IN USE"
+    }, available : {
+        color: "text-teal",
+        label: "AVAILABLE"
     }
 }
 
-export function LabsPreviewCard ({ labName, capacity, location, status } : PreviewCardProps) {
+export function LabsPreviewCard ({ labName, capacity, location, status, labID } : PreviewCardProps) {
 
     const router = useRouter();
     const config = statusConfig[status]
@@ -31,8 +41,8 @@ export function LabsPreviewCard ({ labName, capacity, location, status } : Previ
             <Text className="font-subheading color-white">{ location }</Text>
             <Text className="font-subheading color-white">{ capacity }</Text>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                <Text className={`font-heading color-${config.color}`}>{ config.label }</Text>
-                <TouchableOpacity onPress={() => router.push("/")}>
+                <Text className={`font-heading ${config.color}`}>{ config.label }</Text>
+                <TouchableOpacity onPress={() => router.push({ pathname : "/computer_labs/[lab_id]", params: {lab_id: labID} })}>
                     <Text className="text-glow">View Availability →</Text>
                 </TouchableOpacity>
             </View>

@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import { View, Text, TouchableOpacity } from "react-native";
 
 interface ReservationCardProps {
@@ -6,20 +7,34 @@ interface ReservationCardProps {
     department: string;
     time: string;
     status: string;
+    reservationId: number
 }
 
 const statusConfig: Record<string, {color: string, label: string}> = {
     reserved: {
-        color: "success",
+        color: "text-success",
         label: "RESERVED"
-    }, pending: {
-        color: "warning",
+    }, pending : {
+        color: "text-warning",
         label: "PENDING"
+    }, rejected : {
+        color: "text-danger",
+        label: "REJECTED"
+    }, in_use : {
+        color: "text-info",
+        label: "IN USE"
+    }, available : {
+        color: "text-teal",
+        label: "AVAILABLE"
+    }, cancelled : {
+        color: "text-muted",
+        label: "CANCELLED"
     }
 }
 
-export function ReservationCard ({ computerLab, name, department, time, status }: ReservationCardProps) {
+export function ReservationCard ({ computerLab, name, department, time, status, reservationId }: ReservationCardProps) {
 
+    const router = useRouter();
     const config = statusConfig[status]
 
     return (
@@ -29,9 +44,10 @@ export function ReservationCard ({ computerLab, name, department, time, status }
             <Text className="color-white font-sans">{name}</Text>
             <Text className="color-white font-sans">{department}</Text>
             <Text className="text-sm text-secondary color-white">{time}</Text>
-            <Text className={`font-heading text-xl color-${config.color}`}>{config.label}</Text>
+            <Text className={`font-heading text-xl ${config.color}`}>{config.label}</Text>
 
-            <TouchableOpacity className="absolute bottom-5 right-5 px-4 py-1 border-2 align-middle justify-center rounded-full border-glow text-glow">
+            <TouchableOpacity onPress={() => { console.log("RESERVATION CARDDD", reservationId); router.push(`/reservations/${reservationId}/`);}}
+                className="absolute bottom-5 right-5 px-4 py-1 border-2 align-middle justify-center rounded-full border-glow text-glow">
                 <Text className="text-glow font-bold text-xl">{"›"}</Text>
             </TouchableOpacity>
 

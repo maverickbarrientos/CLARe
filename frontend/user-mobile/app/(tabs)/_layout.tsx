@@ -8,6 +8,7 @@ const _Layout = () => {
   return (
     <Tabs
       screenOptions={{
+        headerShown: false,
         tabBarShowLabel: false,
         tabBarItemStyle: {
           width: '100%',
@@ -54,6 +55,17 @@ const _Layout = () => {
           headerShown: false,
           tabBarIcon: ({ focused }) => (
               <TabIcon focused={focused} icon={Icons.computer_labs} title="COMPUTER LABS" />
+          ),
+         }}
+      />
+
+      <Tabs.Screen
+        name='lab_class'
+        options={{
+          title: "LAB CLASS",
+          headerShown: false,
+          tabBarIcon: ({ focused }) => (
+              <TabIcon focused={focused} icon={Icons.class} title="LAB CLASS" />
           ),
          }}
       />
