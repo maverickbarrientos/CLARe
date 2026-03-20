@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy.orm import joinedload
 from datetime import timedelta, datetime, timezone
@@ -34,10 +34,10 @@ class QRCodeService(BaseService):
             raise HTTPException(status_code=500, detail="Failed uploading image on ImageKit")
         
     
-    async def __save_qr_to_db(self, payload: QRCodeCreate, image_url: str) -> QRCodeResponse:
+    async def __save_qr_to_db(self, payload: QRCodeCreate, image_url: str, file_id: str) -> QRCodeResponse:
         
         
-        qr_code = QRCode(**payload, image_url=image_url)
+        qr_code = QRCode(**payload, image_url=image_url, file_id=file_id)
         
         self.session.add(qr_code)
         
@@ -152,7 +152,7 @@ class QRCodeService(BaseService):
             buffer.name = f"{payload['qr_value']}.png"
             imagekit_upload = await self.__upload_photo(buffer, f"{payload['qr_value']}.png")
             
-            qr_code = await self.__save_qr_to_db(payload, imagekit_upload.url)
+            qr_code = await self.__save_qr_to_db(payload, imagekit_upload.url, imagekit_upload.file_id)
             
         except Exception as e:
             print(f"QR Code generation error (create_qr_code) : {e}")
@@ -197,3 +197,53 @@ class QRCodeService(BaseService):
         reservation = result.unique().scalar_one_or_none()
                 
         return reservation
+    
+    async def delete_qr(self, reservation_id: int):
+        
+        stmt = select(QRCode).where(QRCode.reservation_id == reservation_id)
+        
+        try:
+            result = await self.session.execute(stmt)
+            qr_code = result.scalar_one_or_none()
+            
+        except SQLAlchemyError as e:
+            print(f"Database error in delete_qr (fetch) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to fetch QR Code")
+        
+        if not qr_code:
+            raise HTTPException(status_code=404, detail="QR Code not found")
+        
+        try:
+            imagekit.files.delete(qr_code.file_id)
+        except Exception as e:
+            print(f"ImageKit error in delete_qr: {e}")
+            raise HTTPException(status_code=500, detail="Failed to delete image from ImageKit")
+        
+        try:
+            await self.session.delete(qr_code)
+            await self.session.commit()
+        
+        except SQLAlchemyError as e:
+            await self.session.rollback()
+            print(f"Database error in delete_qr (fetch) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to fetch QR Code")
+        
+        return "deleted"
+    
+    async def invalidate_expired_qr_codes(self):
+        
+        now = datetime.now()
+        
+        stmt = (update(QRCode).where(
+                    QRCode.expiry_date <= now)
+                .values(status=QRCodeStatus.invalid)
+                )
+        
+        try:
+            await self.session.execute(stmt)
+            await self.session.commit()
+            
+        except SQLAlchemyError as e:
+            await self.session.rolback()
+            print(f"Database error in invalidate_expired_qr_codes (commit) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to invalidate QR Code")

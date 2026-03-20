@@ -39,8 +39,8 @@ class CancellationRequestService(ReservationService):
         if existing_cancellation:
             raise HTTPException(status_code=409, detail="Cancellation request already exists for this reservation")
         
-        if reservation.status != ReservationStatus.reserved:
-            raise HTTPException(status_code=409, detail="Cancellation request is only allowed for reserved reservations")
+        if reservation.status not in (ReservationStatus.reserved, ReservationStatus.in_use):
+            raise HTTPException(status_code=409, detail="Cancellation request is only allowed for reserved or in-use reservations")
         
         cancellation_request = CancellationRequest(**payload.model_dump(), user_id=user_id)
         
@@ -60,7 +60,9 @@ class CancellationRequestService(ReservationService):
         await self.session.refresh(cancellation_request)
         updated_reservation = await self.update_reservation_status(payload.reservation_id, ReservationStatus.cancellation_requested)
         
-        return cancellation_request, updated_reservation
+        reservation_response = await self.get_reservation_by_id(updated_reservation.id)
+        
+        return reservation_response
     
     async def reject_request(self, reservation_id: int, admin_note: str):
         stmt = select(CancellationRequest).where(CancellationRequest.reservation_id == reservation_id)
@@ -91,7 +93,10 @@ class CancellationRequestService(ReservationService):
         await self.session.refresh(cancellation_request)
         updated_reservation = await self.update_reservation_status(reservation_id, ReservationStatus.reserved)
         
-        return cancellation_request, updated_reservation
+        reservation_response = await self.get_reservation_by_id(updated_reservation.id)
+        
+        return reservation_response
+        
     
     async def approve_request(self, reservation_id: int):
         
@@ -121,4 +126,6 @@ class CancellationRequestService(ReservationService):
         await self.session.refresh(cancellation_request)
         updated_reservation = await self.update_reservation_status(reservation_id, ReservationStatus.cancelled)
         
-        return cancellation_request, updated_reservation
+        reservation_response = await self.get_reservation_by_id(updated_reservation.id)
+        
+        return reservation_response

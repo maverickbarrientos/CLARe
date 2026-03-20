@@ -6,13 +6,16 @@ from datetime import date, timedelta
 
 from api.v1.sockets import sio
 
-from config.security import UserManager, get_user_manager
+from database.base import Users
+
+from config.security import UserManager, get_user_manager, super_user
 from services.computer_lab_service import ComputerLabService
 from services.user_service import UserService
 from services.reservation_service import ReservationService
 from services.qr_code_service import QRCodeService
 from services.cancellation_request_service import CancellationRequestService
 from services.lab_class_service import LabClassService
+from services.dashboard_service import DashboardService
 from database.session import get_session
 
 from schemas.computer_lab_schema import ComputerLabCreate, ComputerLabResponse, ComputerLabUpdate
@@ -41,9 +44,28 @@ def cancellation_service_dependency(session: AsyncSession = Depends(get_session)
 def lab_class_service_dependency(session: AsyncSession = Depends(get_session)) -> LabClassService:
     return LabClassService(session)
 
+def dashboard_service_dependency(session: AsyncSession = Depends(get_session)) -> DashboardService:
+    return DashboardService(session)
+
 @admin_router.get("/")
-async def index():
-    pass
+async def index(
+    super_user: Users = Depends(super_user),
+    dashboard_service: DashboardService = Depends(dashboard_service_dependency)
+):
+    
+    dashboard_data = await dashboard_service.get_dashboard()
+    
+    return dashboard_data
+
+@admin_router.get("/me")
+async def get_current_user(
+    super_user: Users = Depends(super_user),
+    user_service: UserService = Depends(user_service_dependency)
+):
+    
+    user = await user_service.get_user_by_id(super_user.id)
+    
+    return user
 
 """
 
@@ -53,16 +75,29 @@ ADMIN - COMPUTER LABS ROUTE
 
 @admin_router.get("/computer_labs", response_model=dict[str, list[ComputerLabResponse]])
 async def get_computer_labs(
+    super_user: Users = Depends(super_user),
     computer_lab_service: ComputerLabService = Depends(computer_lab_service_dependency),
 ):
+    print(super_user.email)
 
     computer_labs = await computer_lab_service.get_all_labs()
     
     return { "computer_labs" : computer_labs }
 
+@admin_router.get("/computer_labs/analytics")
+async def get_lab_analytics(
+    super_user: Users = Depends(super_user),
+    computer_lab_service: ComputerLabService = Depends(computer_lab_service_dependency)
+):
+    
+    lab_analytics = await computer_lab_service.get_lab_analytics()
+    
+    return lab_analytics
+
 @admin_router.get("/computer_lab/{lab_id}")
 async def get_lab_by_id(
     lab_id: int,
+    super_user: Users = Depends(super_user),
     computer_lab_service: ComputerLabService = Depends(computer_lab_service_dependency)
 ):
     
@@ -73,6 +108,7 @@ async def get_lab_by_id(
 @admin_router.post("/create_lab")
 async def create_lab(
     computer_lab: ComputerLabCreate,
+    super_user: Users = Depends(super_user),
     computer_lab_service: ComputerLabService = Depends(computer_lab_service_dependency)
 ):
     
@@ -84,15 +120,17 @@ async def create_lab(
 async def update_lab(
     lab_id: int,
     computer_lab: ComputerLabUpdate,
+    super_user: Users = Depends(super_user),
     computer_lab_service: ComputerLabService = Depends(computer_lab_service_dependency)
 ):
     updated_lab = await computer_lab_service.update_lab(lab_id, computer_lab)
     
     return { "computer_lab" : updated_lab }
 
-@admin_router.delete("/delete_lab", response_model=dict[str, str])
+@admin_router.delete("/delete_lab/{lab_id}", response_model=dict[str, str])
 async def delete_lab(
     lab_id: int,
+    super_user: Users = Depends(super_user),
     computer_lab_service: ComputerLabService = Depends(computer_lab_service_dependency)
 ):
     
@@ -108,6 +146,7 @@ ADMIN - USERS ROUTE
 @admin_router.get("/users", response_model=dict[str, list[UserResponse]])
 async def get_users(
     search: Optional[str] = None,
+    super_user: Users = Depends(super_user),
     user_service: UserService = Depends(user_service_dependency)
 ):
     
@@ -118,6 +157,7 @@ async def get_users(
 @admin_router.get("/user/{user_id}", response_model=UserResponse)
 async def get_user_by_id(
     user_id: int,
+    super_user: Users = Depends(super_user),
     user_service: UserService = Depends(user_service_dependency)
 ):
     
@@ -129,6 +169,7 @@ async def get_user_by_id(
 async def create_user(
     user: UserCreate,
     user_information: UserInformationCreate,
+    super_user: Users = Depends(super_user),
     user_service: UserService = Depends(user_service_dependency),
     user_manager: UserManager = Depends(get_user_manager)
 ):
@@ -142,6 +183,7 @@ async def update_user(
     user_id: int,
     user: UserUpdate,
     user_information: UserInformationUpdate,
+    super_user: Users = Depends(super_user),
     user_service: UserService = Depends(user_service_dependency),
     user_manager: UserManager = Depends(get_user_manager)
 ):
@@ -153,6 +195,7 @@ async def update_user(
 @admin_router.delete("/delete_user/{user_id}", response_model=dict[str, str])
 async def delete_user(
     user_id: int,
+    super_user: Users = Depends(super_user),
     user_service: UserService = Depends(user_service_dependency),
     user_manager: UserManager = Depends(get_user_manager)
 ):
@@ -170,6 +213,7 @@ ADMIN - RESERVATION ROUTE
 @admin_router.get("/reservations", response_model=dict[str, list[ReservationResponse]])
 async def get_all_reservations(
     search: Optional[str] = None,
+    super_user: Users = Depends(super_user),
     reservation_service: ReservationService = Depends(reservation_service_dependency)
 ):
     
@@ -180,6 +224,7 @@ async def get_all_reservations(
 @admin_router.get("/user_reservations/{user_id}")
 async def get_user_reservations(
     user_id: int,
+    super_user: Users = Depends(super_user),
     reservation_service: ReservationService = Depends(reservation_service_dependency)
 ):
     
@@ -190,6 +235,7 @@ async def get_user_reservations(
 @admin_router.get("/reservation/{reservation_id}", response_model=dict[str, ReservationResponse])
 async def get_reservation_by_id(
     reservation_id: int,
+    super_user: Users = Depends(super_user),
     reservation_service: ReservationService = Depends(reservation_service_dependency)
 ):
     reservation = await reservation_service.get_reservation_by_id(reservation_id)
@@ -199,6 +245,7 @@ async def get_reservation_by_id(
 @admin_router.post("/custom_reservation", response_model=dict[str, ReservationCreateResponse])
 async def custom_reservation(
     reservation: AdminReservationCreate,
+    super_user: Users = Depends(super_user),
     reservation_service: ReservationService = Depends(reservation_service_dependency)
 ):
 
@@ -206,9 +253,10 @@ async def custom_reservation(
   
   return { "reservation" : new_reservation }
 
-@admin_router.delete("/delete_reservation", response_model=dict[str, str])
+@admin_router.delete("/delete_reservation/{reservation_id}", response_model=dict[str, str])
 async def delete_reservation(
     reservation_id: int,
+    super_user: Users = Depends(super_user),
     reservation_service: ReservationService = Depends(reservation_service_dependency)
 ):
     
@@ -220,6 +268,7 @@ async def delete_reservation(
 async def update_reservation(
     reservation_id: int,
     payload: ReservationUpdate,
+    super_user: Users = Depends(super_user),
     reservation_service: ReservationService = Depends(reservation_service_dependency)
 ):
     
@@ -230,11 +279,12 @@ async def update_reservation(
 @admin_router.patch("/reservation/{reservation_id}/approve", response_model=ApprovalResponse)
 async def approve_reservation(
     reservation_id: int,
+    super_user: Users = Depends(super_user),
     reservation_service: ReservationService = Depends(reservation_service_dependency),
     qr_code_service: QRCodeService = Depends(qr_service_dependency)
 ):
     
-    reservation = await reservation_service.update_reservation_status(reservation_id, ReservationStatus.reserved)
+    reservation = await reservation_service.approve_reservation(reservation_id, ReservationStatus.reserved)
     
     if reservation:
         qr_payload = await qr_code_service.generate_qr_data(reservation)
@@ -245,10 +295,12 @@ async def approve_reservation(
 @admin_router.patch("/reservation/{reservation_id}/reject", response_model=ReservationCreateResponse)
 async def reject_reservation(
     reservation_id: int,
+    reject_reason: str,
+    super_user: Users = Depends(super_user),
     reservation_service: ReservationService = Depends(reservation_service_dependency)
 ):
     
-    reservation = await reservation_service.update_reservation_status(reservation_id, ReservationStatus.rejected)
+    reservation = await reservation_service.reject_reservation(reservation_id, reject_reason, ReservationStatus.rejected)
     
     return reservation
 
@@ -256,6 +308,7 @@ async def reject_reservation(
 async def reject_cancellation(
     reservation_id: int,
     admin_note: str,
+    super_user: Users = Depends(super_user),
     cancellation_service: CancellationRequestService = Depends(cancellation_service_dependency)
 ):
     
@@ -266,6 +319,7 @@ async def reject_cancellation(
 @admin_router.patch("/approve_cancellation/{reservation_id}")
 async def approve_cancellation(
     reservation_id: int,
+    super_user: Users = Depends(super_user),
     cancellation_service: CancellationRequestService = Depends(cancellation_service_dependency)
 ):
     
@@ -287,6 +341,7 @@ async def verify_qr_code(
 @admin_router.patch("/qr_code/{qr_value}/invalidate")
 async def invalidate_qr(
     qr_value: str,
+    super_user: Users = Depends(super_user),
     qr_code_service: QRCodeService = Depends(qr_service_dependency)
 ):
     
@@ -297,6 +352,7 @@ async def invalidate_qr(
 @admin_router.get("/class")
 async def get_class(
     day: Optional[str] = None,
+    super_user: Users = Depends(super_user),
     lab_class_service: LabClassService = Depends(lab_class_service_dependency)
 ):
     
@@ -307,6 +363,7 @@ async def get_class(
 @admin_router.get("/class/{class_id}")
 async def get_class_by_id(
     class_id: int,
+    super_user: Users = Depends(super_user),
     lab_class_service: LabClassService = Depends(lab_class_service_dependency)
 ):
     
@@ -317,6 +374,7 @@ async def get_class_by_id(
 @admin_router.post("/create_class")
 async def create_class(
     payload: LabClassCreate,
+    super_user: Users = Depends(super_user),
     lab_class_service: LabClassService = Depends(lab_class_service_dependency)
 ):
     
@@ -328,6 +386,7 @@ async def create_class(
 async def update_class(
     class_id: int,
     payload: LabClassUpdate,
+    super_user: Users = Depends(super_user),
     lab_class_service: LabClassService = Depends(lab_class_service_dependency)
 ):
     
@@ -338,6 +397,7 @@ async def update_class(
 @admin_router.delete("/delete_class/{class_id}")
 async def delete_class(
     class_id: int,
+    super_user: Users = Depends(super_user),
     lab_class_service: LabClassService = Depends(lab_class_service_dependency)
 ):
     
@@ -348,6 +408,7 @@ async def delete_class(
 @admin_router.get("/weekly_events")
 async def get_weekly_events(
     start_of_week: date = None,
+    super_user: Users = Depends(super_user),
     reservation_service: ReservationService = Depends(reservation_service_dependency)
 ):
     

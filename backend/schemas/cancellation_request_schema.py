@@ -20,4 +20,4 @@ class CancellationResponse(BaseModel):
     created_at: datetime
     status: CancellationStatus
     admin_note: Optional[str] = None
-    handled_at: Optional[str] = None
+    handled_at: Optional[datetime] = None

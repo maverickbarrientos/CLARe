@@ -11,6 +11,7 @@ from services.computer_lab_service import ComputerLabService
 from services.reservation_service import ReservationService
 from services.cancellation_request_service import CancellationRequestService
 from services.lab_class_service import LabClassService
+from services.user_service import UserService
 
 from schemas.reservation_schemas import UserReservationCreate, ReservationUpdate
 from schemas.cancellation_request_schema import CancellationRequestCreate
@@ -29,6 +30,9 @@ def cancellation_service_dependency(session: AsyncSession = Depends(get_session)
 def lab_class_service_dependency(session: AsyncSession = Depends(get_session)) -> LabClassService:
     return LabClassService(session)
 
+def user_service_dependency(session: AsyncSession = Depends(get_session)) -> UserService:
+    return UserService(session)
+
 @users_router.get("/")
 async def user(
     user: Users = Depends(current_active_user),
@@ -38,6 +42,16 @@ async def user(
     upcoming_reservation = await reservation_service.get_upcoming_reservation(user.id)
 
     return upcoming_reservation
+
+@users_router.get("/me")
+async def get_user_information(
+    user: Users = Depends(current_active_user),
+    user_service: UserService = Depends(user_service_dependency)
+):
+    
+    user = await user_service.get_user_by_id(user.id)
+    
+    return user
 
 @users_router.get("/computer_labs")
 async def get_active_computer_labs(
@@ -124,3 +138,24 @@ async def get_class(
     lab_class = await lab_class_service.get_all_class()
     
     return lab_class
+
+@users_router.get("/class/{class_id}")
+async def get_class_by_id(
+    class_id: int,
+    user: Users = Depends(current_active_user),
+    lab_class_service: LabClassService = Depends(lab_class_service_dependency)
+):
+    
+    lab_class = await lab_class_service.get_class_by_id(class_id)
+    
+    return lab_class
+
+@users_router.get("/user_reservations")
+async def get_user_reservations(
+    user: Users = Depends(current_active_user),
+    reservation_service: ReservationService = Depends(reservation_service_dependency)
+):
+    
+    reservations = await reservation_service.get_user_reservations(user.id)
+    
+    return reservations

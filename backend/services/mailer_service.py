@@ -1,3 +1,4 @@
+import aiosmtplib
 from ssl import create_default_context
 from jinja2 import Template
 from email.mime.text import MIMEText
@@ -36,21 +37,22 @@ class MailerService():
 
         msg = MailBody(**data)
         message = MIMEText(msg.body, "html", "utf-8")
-        message["From"] = USERNAME
+        message["From"] = "CLARe - CITE Lab Reservation"
         message["To"] = ", ".join(msg.to) if isinstance(msg.to, list) else msg.to
         message["Subject"] = msg.subject
-        message["Reply-To"] = "noreply@noreply.com"
 
         ctx = create_default_context()
 
         try:
-            with SMTP(HOST, PORT) as server:
-                server.ehlo()
-                server.starttls(context=ctx)
-                server.ehlo()
-                server.login(USERNAME, PASSWORD)
-                server.send_message(message)
-                print(f"Email sent to {message['To']} | Subject: {message['Subject']}")
+            await aiosmtplib.send(
+                message,
+                hostname=HOST,
+                port=PORT,
+                username=USERNAME,
+                password=PASSWORD,
+                start_tls=True,
+            )
+            print(f"Email sent to {message['To']} | Subject: {message['Subject']}")
             return {"status": 200, "errors": None}
         except Exception as e:
             return {"status": 500, "errors": str(e)}

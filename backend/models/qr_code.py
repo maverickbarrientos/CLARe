@@ -11,6 +11,7 @@ class QRCode(Base):
     
     id: int = Column(Integer, primary_key=True, autoincrement=True)
     reservation_id: int = Column(ForeignKey("reservations.id", onupdate="CASCADE", ondelete="CASCADE"), unique=True)
+    file_id: str = Column(String(255))
     qr_value: str = Column(String(255))
     image_url: str = Column(String(500))
     issue_date: datetime = Column(DateTime)

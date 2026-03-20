@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Enum
+from sqlalchemy import Column, String, Integer, ForeignKey, DateTime, Enum, Text
 from sqlalchemy.orm import relationship
 from database.base import Base
 
@@ -15,6 +15,7 @@ class Reservation(Base):
     department: str = Column(String(255))
     email: str = Column(String(255))
     reservation_description: str = Column(String(255))
+    reject_reason: str = Column(Text)
     start_date: datetime = Column(DateTime)
     end_date: datetime = Column(DateTime)
     status: str = Column(Enum(ReservationStatus), default=ReservationStatus.pending)

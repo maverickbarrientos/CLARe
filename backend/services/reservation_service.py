@@ -1,5 +1,5 @@
 from fastapi import HTTPException
-from sqlalchemy import select, and_, or_
+from sqlalchemy import select, and_, or_, update
 from sqlalchemy.orm import joinedload
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from datetime import datetime, timedelta
@@ -165,9 +165,9 @@ class ReservationService(QRCodeService, MailerService):
         
         print("Generate QR Code")
         
-        # if reservation.status == ReservationStatus.reserved:
-        #     qr_payload = await self.generate_qr_data(reservation)
-        #     qr_code = await self.create_qr_code(qr_payload)
+        if reservation.status == ReservationStatus.reserved:
+            qr_payload = await self.generate_qr_data(reservation)
+            qr_code = await self.create_qr_code(qr_payload)
         
         return reservation
     
@@ -234,8 +234,9 @@ class ReservationService(QRCodeService, MailerService):
                 .where(Reservation.user_id == user_id)
                 .where(Reservation.start_date >= datetime.now())
                 .where(Reservation.status.in_([
-                    ReservationStatus.pending,
-                    ReservationStatus.reserved
+                    "pending",
+                    "reserved",
+                    "in_use"
                 ]))
                 .join(Reservation.computer_labs)
                 .join(Reservation.user)
@@ -437,7 +438,9 @@ class ReservationService(QRCodeService, MailerService):
         deletable = await self.__is_deletable(reservation)
                 
         if not deletable:
-            raise HTTPException(status_code=409, detail="Reservation cannot be deleted at its current status")
+            raise HTTPException(status_code=409, detail="Reservation cannot be deleted at its current status")\
+        
+        qr_code_delete = await self.delete_qr(reservation_id)
         
         try:
             await self.session.delete(reservation)
@@ -460,6 +463,8 @@ class ReservationService(QRCodeService, MailerService):
         if not reservation:
             raise HTTPException(status_code=404, detail="Reservation not found")
         
+        qr_code_delete = await self.delete_qr(reservation_id)
+        
         try:
             await self.session.delete(reservation)
             await self.session.commit()
@@ -471,6 +476,49 @@ class ReservationService(QRCodeService, MailerService):
         
         return "deleted"
     
+    
+    async def approve_reservation(self, reservation_id, status: ReservationStatus) -> ReservationCreateResponse:
+        
+        reservation = await self._fetch_reservation_by_id(reservation_id)
+        
+        if not reservation:
+            raise HTTPException(status_code=404, detail="Reservation not found")
+        
+        setattr(reservation, "status", status)
+        
+        try:
+            await self.session.commit()
+            
+        except IntegrityError as e:
+            print(f"Integrity error in approve_reservation : {e}")
+            raise HTTPException(status_code=400, detail="Reservation already approved")
+        
+        except SQLAlchemyError as e:
+            print(f"Database error in approve_reservation (commit) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to update Reservation status")
+        
+        await self.session.refresh(reservation)
+        
+        qr_payload = await self.generate_qr_data(reservation)
+        qr_code = await self.create_qr_code(qr_payload)
+        
+        reservation_response = await self.get_reservation_by_id(reservation.id)
+        
+        await self.send_email({ "to" : [reservation.email], 
+                            "subject": "CLARe — Your Reservation has been Confirmed", 
+                            "template": "templates/reservation-confirmed.html",
+                            "context" : {
+                                "full_name" : reservation.full_name,
+                                "lab_name" : reservation_response.computer_labs.lab_name,
+                                "location" : reservation_response.computer_labs.location,
+                                "start_date" : reservation.start_date,
+                                "end_date" : reservation.end_date,
+                                "department" : reservation.department,
+                                "reservation_description" : reservation.reservation_description,
+                                "qr_url": qr_code.image_url
+                            } })
+                        
+        return reservation_response
     
     async def update_reservation_status(self, reservation_id, status: ReservationStatus) -> ReservationCreateResponse:
         
@@ -493,28 +541,90 @@ class ReservationService(QRCodeService, MailerService):
             raise HTTPException(status_code=500, detail="Failed to update Reservation status")
         
         await self.session.refresh(reservation)
+                        
+        return reservation
+    
+    async def reject_reservation(self, reservation_id: int, reject_reason: str, status: ReservationStatus):
+        
+        reservation = await self._fetch_reservation_by_id(reservation_id)
+        
+        if not reservation:
+            raise HTTPException(status_code=404, detail="Reservation not found")
+        
+        setattr(reservation, "status", status)
+        setattr(reservation, "reject_reason", reject_reason)
+        
+        try:
+            await self.session.commit()
+            
+        except IntegrityError as e:
+            print(f"Integrity error in reject_reservation : {e}")
+            raise HTTPException(status_code=400, detail="Reservation already approved")
+        
+        except SQLAlchemyError as e:
+            print(f"Database error in reject_reservation (commit) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to update Reservation status")
+        
+        await self.session.refresh(reservation)
         
         reservation_response = await self.get_reservation_by_id(reservation.id)
         
-        match reservation.status:
-            case ReservationStatus.reserved:
-                qr_payload = await self.generate_qr_data(reservation)
-                qr_code = await self.create_qr_code(qr_payload)
-                await self.send_email({ "to" : [reservation.email], 
-                                 "subject": "reservation confirmed", 
-                                 "template": "templates/reservation-confirmed.html",
-                                  "context" : {
-                                      "full_name" : reservation.full_name,
-                                      "lab_name" : reservation_response.computer_labs.lab_name,
-                                      "location" : reservation_response.computer_labs.location,
-                                      "start_date" : reservation.start_date,
-                                      "end_date" : reservation.end_date,
-                                      "department" : reservation.department,
-                                      "reservation_description" : reservation.reservation_description,
-                                      "qr_url": qr_code.image_url
-                                  } })
-        
-            case ReservationStatus.rejected:
-                print("send email of rejection")
+        await self.send_email({ "to" : [reservation.email], 
+                            "subject": "CLARe — Your Reservation Request has been Rejected", 
+                            "template": "templates/reservation-rejected.html",
+                            "context" : {
+                                "full_name" : reservation.full_name,
+                                "lab_name" : reservation_response.computer_labs.lab_name,
+                                "location" : reservation_response.computer_labs.location,
+                                "start_date" : reservation.start_date,
+                                "end_date" : reservation.end_date,
+                                "department" : reservation.department,
+                                "reservation_description" : reservation.reservation_description,
+                                "reject_reason": reservation.reject_reason
+                            } })
                         
         return reservation_response
+    
+    async def update_reservation_complete(self):
+        
+        now = datetime.now()
+        
+        stmt = (update(Reservation).where(
+                    Reservation.end_date <= now,
+                    Reservation.status == ReservationStatus.in_use
+                    )
+                .values(status=ReservationStatus.completed)
+                )
+        print(now)
+        
+        try:
+            await self.session.execute(stmt)
+            await self.session.commit()
+            
+        except SQLAlchemyError as e:
+            await self.session.rollback()
+            print(f"Database error in update_reservation_complete (commit) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to update completed reservations")
+        
+    async def cancel_unscanned_reservations(self):
+
+        now = datetime.now()
+        grace_period = now - timedelta(minutes=30)
+        
+        stmt = (update(Reservation)
+                 .where(
+                     and_(
+                        Reservation.start_date <= grace_period,
+                        Reservation.status == ReservationStatus.reserved))
+                .values(status=ReservationStatus.cancelled)
+                )
+        print(now)
+        
+        try:
+            await self.session.execute(stmt)
+            await self.session.commit()
+            
+        except SQLAlchemyError as e:
+            await self.session.rollback()
+            print(f"Database error in cancel_unscanned_reservations (commit) : {e}")
+            raise HTTPException(status_code=500, detail="Failed to cancel unscanned reservations")

@@ -68,6 +68,7 @@ class ReservationResponse(BaseModel):
     start_date: datetime
     end_date: datetime
     status: ReservationStatus
+    reject_reason: Optional[str] = None
     user: UserResponse
     computer_labs: ComputerLabResponse
     qr_codes: Optional[QRCodeResponse] = None
