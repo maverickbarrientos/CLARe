@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LabForm } from "./LabForm";
 import { useCreateLab } from "../../hooks/computer_labs/useCreateLab";
+import { Modal } from "../shared/Modal";
 
 export function CreateLabForm() {
 

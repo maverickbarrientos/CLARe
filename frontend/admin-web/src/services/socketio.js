@@ -1,6 +1,8 @@
 import { io } from "socket.io-client";
 
-const socketio = io("http://127.0.0.1:8000", {
+const API_URL = import.meta.env.VITE_API_URL;
+
+const socketio = io(API_URL, {
     autoConnect: false,
     transports: ["websocket"]
 })
